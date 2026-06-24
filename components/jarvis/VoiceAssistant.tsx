@@ -152,6 +152,7 @@ export default function VoiceAssistant() {
 
   const speakResponse = useCallback((text: string) => {
     if (!synthesisRef.current) return
+    if (!voiceEnabledRef.current) return
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'en-US'
     utterance.rate = 1.0
@@ -322,6 +323,7 @@ export default function VoiceAssistant() {
 
   const handleToggleVoice = useCallback(() => {
     if (voiceEnabled) {
+      synthesisRef.current?.cancel()
       stopMic()
       setVoiceState('idle')
       setTranscript('')
