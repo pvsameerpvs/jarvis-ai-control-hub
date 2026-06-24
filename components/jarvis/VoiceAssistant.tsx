@@ -29,6 +29,8 @@ interface JarvisContextValue {
   sendTextMessage: (text: string) => Promise<void>
   startTypingEffect: (text: string, onComplete?: () => void) => void
   stopTyping: () => void
+  audioLevel: number
+  setAudioLevel: (level: number) => void
 }
 
 const JarvisContext = createContext<JarvisContextValue | undefined>(undefined)
@@ -49,6 +51,25 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
   const typingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [commandHistory, setCommandHistory] = useState<string[]>([])
   const [highlightedPanel, setHighlightedPanel] = useState<string | null>(null)
+  const [rawLevel, setRawLevel] = useState(0)
+  const [smoothLevel, setSmoothLevel] = useState(0)
+  const rafSmoothRef = useRef<number | null>(null)
+  const smoothLevelRef = useRef(0)
+
+  useEffect(() => {
+    const smooth = () => {
+      smoothLevelRef.current += (rawLevel - smoothLevelRef.current) * 0.12
+      if (Math.abs(smoothLevelRef.current - rawLevel) < 0.001) {
+        smoothLevelRef.current = rawLevel
+      }
+      setSmoothLevel(smoothLevelRef.current)
+      rafSmoothRef.current = requestAnimationFrame(smooth)
+    }
+    rafSmoothRef.current = requestAnimationFrame(smooth)
+    return () => {
+      if (rafSmoothRef.current) cancelAnimationFrame(rafSmoothRef.current)
+    }
+  }, [rawLevel])
 
   const stopTyping = useCallback(() => {
     if (typingRef.current) {
@@ -126,6 +147,8 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
         sendTextMessage,
         startTypingEffect,
         stopTyping,
+        audioLevel: smoothLevel,
+        setAudioLevel: setRawLevel,
       }}
     >
       {children}
@@ -156,7 +179,7 @@ const SILENCE_MS = 1200
 const SPEECH_THRESHOLD = 0.02
 
 export default function VoiceAssistant() {
-  const { voiceState, setVoiceState, lastResponse, setLastResponse, addToHistory, startTypingEffect, stopTyping, setDisplayedResponse } = useJarvis()
+  const { voiceState, setVoiceState, lastResponse, setLastResponse, addToHistory, startTypingEffect, stopTyping, setDisplayedResponse, audioLevel, setAudioLevel } = useJarvis()
 
   const [transcript, setTranscript] = useState('')
   const [micSupported, setMicSupported] = useState(true)
@@ -300,6 +323,8 @@ export default function VoiceAssistant() {
       if (v > max) max = v
     }
 
+    setAudioLevel(max)
+
     if (max > SPEECH_THRESHOLD) {
       if (!speakingRef.current) {
         speakingRef.current = true
@@ -397,45 +422,137 @@ export default function VoiceAssistant() {
   }, [voiceEnabled, startListening, stopMic, stopTyping, setLastResponse, setDisplayedResponse])
 
   const isVoiceActive = voiceState !== 'idle'
+  const isError = voiceState === 'error'
+
+  const statusText = voiceState === 'listening' ? (isSpeaking ? 'SIGNAL DETECTED' : 'STANDBY') :
+    voiceState === 'processing' ? 'PROCESSING' :
+    voiceState === 'speaking' ? 'OUTPUT' :
+    voiceState === 'executing' ? 'EXECUTING' :
+    voiceState === 'error' ? 'LINK ERROR' :
+    'OFFLINE'
+
+  const statusIcon = voiceState === 'listening' ? '◈' :
+    voiceState === 'processing' ? '◇' :
+    voiceState === 'speaking' ? '◈' :
+    voiceState === 'executing' ? '◆' :
+    voiceState === 'error' ? '◆' : '◇'
 
   return (
-    <div className="w-full flex flex-col items-center gap-2">
-      <div className="flex items-center justify-between w-full">
-        <div className="flex items-center gap-2">
-          <MicIcon className={`w-3.5 h-3.5 ${isVoiceActive ? 'text-blue-400' : 'text-blue-700/40'}`} />
-          <span className={`text-[10px] font-mono tracking-wider ${isVoiceActive ? 'text-blue-400/80' : 'text-blue-700/40'}`}>
-            {voiceState === 'listening' ? (isSpeaking ? 'HEARING...' : 'WAITING...') :
-             voiceState === 'processing' ? 'THINKING...' :
-             voiceState === 'speaking' ? 'SPEAKING...' :
-             voiceState === 'executing' ? 'EXECUTING...' :
-             voiceState === 'error' ? 'ERROR' :
-             'OFF'}
+    <div className="w-full">
+      {/* Holographic panel */}
+      <div className="relative rounded-sm border border-[#00E5FF]/15 bg-[#020617]/80 backdrop-blur-sm">
+        {/* Corner accents */}
+        <div className="absolute top-0 left-0 w-2 h-px bg-gradient-to-r from-[#00E5FF]/60 to-transparent" />
+        <div className="absolute top-0 left-0 w-px h-2 bg-gradient-to-b from-[#00E5FF]/60 to-transparent" />
+        <div className="absolute top-0 right-0 w-2 h-px bg-gradient-to-l from-[#00E5FF]/60 to-transparent" />
+        <div className="absolute top-0 right-0 w-px h-2 bg-gradient-to-b from-[#00E5FF]/60 to-transparent" />
+        <div className="absolute bottom-0 left-0 w-2 h-px bg-gradient-to-r from-[#00E5FF]/60 to-transparent" />
+        <div className="absolute bottom-0 left-0 w-px h-2 bg-gradient-to-t from-[#00E5FF]/60 to-transparent" />
+        <div className="absolute bottom-0 right-0 w-2 h-px bg-gradient-to-l from-[#00E5FF]/60 to-transparent" />
+        <div className="absolute bottom-0 right-0 w-px h-2 bg-gradient-to-t from-[#00E5FF]/60 to-transparent" />
+
+        {/* Top divider line */}
+        <div className="h-px bg-gradient-to-r from-transparent via-[#00E5FF]/15 to-transparent mx-3" />
+
+        {/* Header row */}
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center gap-2">
+            <span className={`font-mono text-[9px] ${isError ? 'text-[#FB7185]/70' : 'text-[#00E5FF]/70'}`}
+              style={{
+                textShadow: isVoiceActive ? `0 0 ${4 + audioLevel * 6}px rgba(0,229,255,0.3)` : 'none',
+              }}>
+              {statusIcon}
+            </span>
+            <span className="font-mono text-[9px] tracking-[0.2em] text-[#00E5FF]/40">AUDIO::LINK</span>
+            <span className={`font-mono text-[8px] tracking-[0.15em] ${voiceEnabled ? 'text-[#00E5FF]/70' : 'text-[#00E5FF]/20'}`}>
+              [{voiceEnabled ? 'ACTIVE' : 'DISABLED'}]
+            </span>
+          </div>
+          <button
+            onClick={handleToggleVoice}
+            disabled={!micSupported}
+            className="relative group"
+          >
+            <div className={`
+              relative w-8 h-3.5 rounded-sm transition-all duration-300
+              ${voiceEnabled ? 'bg-[#00E5FF]/20' : 'bg-[#00E5FF]/5'}
+              ${!micSupported ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}
+              border border-[#00E5FF]/20
+            `}>
+              <span className={`
+                absolute top-[1px] w-3 h-[10px] rounded-[1px] transition-all duration-300
+                ${voiceEnabled
+                  ? 'left-[18px] bg-[#00E5FF] shadow-[0_0_6px_rgba(0,229,255,0.6)]'
+                  : 'left-[1px] bg-[#00E5FF]/30'
+                }
+              `} />
+            </div>
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="h-px bg-gradient-to-r from-transparent via-[#00E5FF]/10 to-transparent mx-3" />
+
+        {/* Status row */}
+        <div className="px-3 py-1.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className={`w-1.5 h-1.5 rounded-[1px] transition-all duration-300 ${
+              isError ? 'bg-[#FB7185] shadow-[0_0_6px_rgba(251,113,133,0.6)]' :
+              isVoiceActive ? 'bg-[#00E5FF] shadow-[0_0_6px_rgba(0,229,255,0.6)]' :
+              'bg-[#00E5FF]/20'
+            } ${isVoiceActive ? 'animate-pulse' : ''}`} />
+            <span className={`font-mono text-[9px] tracking-[0.25em] ${
+              isError ? 'text-[#FB7185]/70' : isVoiceActive ? 'text-[#00E5FF]/80' : 'text-[#00E5FF]/30'
+            }`}>
+              {statusText}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-[7px] text-[#00E5FF]/20 tracking-[0.15em]">SIG</span>
+            <div className="w-8 h-[2px] rounded-full overflow-hidden bg-[#00E5FF]/8">
+              <div className="h-full rounded-full transition-all duration-100"
+                style={{
+                  width: `${Math.min(100, audioLevel * 300)}%`,
+                  background: 'linear-gradient(to right, rgba(0,229,255,0.3), rgba(0,229,255,0.8))',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Transcript */}
+        {transcript && (
+          <>
+            <div className="h-px bg-gradient-to-r from-transparent via-[#00E5FF]/8 to-transparent mx-3" />
+            <div className="px-3 py-1.5">
+              <div className="flex items-start gap-1.5">
+                <span className="font-mono text-[9px] text-[#00E5FF]/40 mt-0.5">{'>'}</span>
+                <p className="font-mono text-[9px] text-[#00E5FF]/70 break-words leading-relaxed tracking-wide">
+                  {transcript}
+                </p>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Bottom status bar */}
+        <div className="h-px bg-gradient-to-r from-transparent via-[#00E5FF]/10 to-transparent mx-3" />
+        <div className="px-3 py-1 flex items-center justify-between">
+          <span className="font-mono text-[7px] text-[#00E5FF]/20 tracking-[0.15em]">
+            {voiceEnabled ? 'LINK::ESTABLISHED' : 'LINK::STANDBY'}
+          </span>
+          <span className="font-mono text-[7px] text-[#00E5FF]/20 tracking-[0.15em]">
+            v2.1.4
           </span>
         </div>
-        <button
-          onClick={handleToggleVoice}
-          className={`
-            relative w-9 h-5 rounded-full transition-all duration-300
-            ${voiceEnabled ? 'bg-blue-400/40' : 'bg-blue-900/30'}
-            ${!micSupported ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
-          `.trim()}
-        >
-          <span className={`
-            absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-all duration-300 shadow-md
-            ${voiceEnabled ? 'translate-x-4' : 'translate-x-0'}
-          `.trim()} />
-        </button>
       </div>
 
       {!micSupported && (
-        <p className="text-[9px] font-mono text-blue-700/60 tracking-wide">
-          Mic unavailable
-        </p>
-      )}
-
-      {transcript && (
-        <div className="w-full p-2 rounded bg-blue-950/30 border border-blue-500/15">
-          <p className="text-[10px] font-mono text-blue-300/70 break-words">{transcript}</p>
+        <div className="mt-1.5 flex items-center gap-1.5 justify-center">
+          <span className="w-1 h-1 rounded-full bg-[#FB7185]/60" />
+          <span className="font-mono text-[8px] text-[#FB7185]/50 tracking-[0.15em]">
+            MIC UNAVAILABLE
+          </span>
         </div>
       )}
     </div>

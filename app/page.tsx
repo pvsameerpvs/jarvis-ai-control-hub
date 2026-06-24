@@ -87,21 +87,16 @@ function CenterZone() {
     : 'idle'
 
   return (
-    <div className="flex flex-col items-center justify-center gap-6">
-      {/* Decorative rings */}
-      <div className="relative flex items-center justify-center">
-        <div className="absolute w-[300px] h-[300px] rounded-full border border-blue-500/5 animate-rotateRing"
-             style={{ animationDuration: '10s' }} />
-        <div className="absolute w-[250px] h-[250px] rounded-full border border-blue-400/10 animate-rotateRing"
-             style={{ animationDuration: '14s', animationDirection: 'reverse' }} />
-        <div className="absolute w-[200px] h-[200px] rounded-full border border-blue-400/15 animate-rotateRing"
-             style={{ animationDuration: '6s' }} />
+    <div className="flex flex-col items-center justify-center gap-4 min-w-0 w-full max-w-[400px] mx-auto">
+      <div className="relative flex items-center justify-center shrink-0">
         <div className="relative">
           <JarvisOrb state={orbState} />
         </div>
       </div>
-      <VoiceWaveform state={orbState} />
-      <div className="w-full max-w-[180px]">
+      <div className="w-full shrink-0">
+        <VoiceWaveform state={orbState} />
+      </div>
+      <div className="w-full shrink-0">
         <VoiceAssistant />
       </div>
     </div>

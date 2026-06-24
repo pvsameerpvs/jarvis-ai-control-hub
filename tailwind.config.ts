@@ -66,6 +66,24 @@ const config: Config = {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-10px)' },
         },
+        corePulse: {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.85' },
+          '50%': { transform: 'scale(1.04)', opacity: '1' },
+        },
+        rippleExpand: {
+          '0%': { transform: 'scale(0.3)', opacity: '0.5' },
+          '100%': { transform: 'scale(2.5)', opacity: '0' },
+        },
+        particleFloat: {
+          '0%, 100%': { transform: 'translateY(0) translateX(0)' },
+          '25%': { transform: 'translateY(-10px) translateX(6px)' },
+          '50%': { transform: 'translateY(3px) translateX(-5px)' },
+          '75%': { transform: 'translateY(-5px) translateX(4px)' },
+        },
+        pulseOpacity: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.2' },
+        },
       },
       animation: {
         orbPulse: 'orbPulse 3s ease-in-out infinite',
