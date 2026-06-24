@@ -84,6 +84,30 @@ const config: Config = {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.2' },
         },
+        idlePulse: {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.7' },
+          '50%': { transform: 'scale(1.03)', opacity: '0.9' },
+        },
+        activePulse: {
+          '0%': { transform: 'scale(0.95)', opacity: '0.8' },
+          '25%': { transform: 'scale(1.06)', opacity: '1' },
+          '50%': { transform: 'scale(0.98)', opacity: '0.85' },
+          '75%': { transform: 'scale(1.04)', opacity: '0.95' },
+          '100%': { transform: 'scale(0.95)', opacity: '0.8' },
+        },
+        coreFlash: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.6' },
+        },
+        rippleFast: {
+          '0%': { transform: 'scale(0.2)', opacity: '0.7' },
+          '100%': { transform: 'scale(2.2)', opacity: '0' },
+        },
+        dataStream: {
+          '0%': { transform: 'translate(0, 0)', opacity: '1' },
+          '50%': { opacity: '0.3' },
+          '100%': { transform: 'translate(var(--dx, 30px), var(--dy, -30px))', opacity: '0' },
+        },
       },
       animation: {
         orbPulse: 'orbPulse 3s ease-in-out infinite',
