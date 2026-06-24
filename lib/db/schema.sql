@@ -1,0 +1,94 @@
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS command_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL DEFAULT 'command',
+  message TEXT NOT NULL,
+  metadata TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ai_action_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  action TEXT NOT NULL,
+  prompt TEXT,
+  response TEXT,
+  model TEXT,
+  tokens_used INTEGER,
+  duration_ms INTEGER,
+  status TEXT DEFAULT 'success',
+  metadata TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS connector_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  connector TEXT NOT NULL,
+  event TEXT NOT NULL,
+  message TEXT,
+  status TEXT DEFAULT 'info',
+  metadata TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS vision_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source TEXT NOT NULL,
+  action TEXT NOT NULL,
+  image_description TEXT,
+  analysis_result TEXT,
+  duration_ms INTEGER,
+  status TEXT DEFAULT 'success',
+  metadata TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS gmail_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  action TEXT NOT NULL,
+  email_id TEXT,
+  from_address TEXT,
+  subject TEXT,
+  snippet TEXT,
+  status TEXT DEFAULT 'success',
+  metadata TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS telegram_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  action TEXT NOT NULL,
+  chat_id TEXT,
+  message TEXT,
+  direction TEXT DEFAULT 'sent',
+  status TEXT DEFAULT 'success',
+  metadata TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS erp_connectors (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  type TEXT NOT NULL,
+  config TEXT NOT NULL,
+  is_active INTEGER DEFAULT 1,
+  last_sync_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS local_memory (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  key TEXT NOT NULL UNIQUE,
+  value TEXT NOT NULL,
+  category TEXT DEFAULT 'general',
+  ttl INTEGER,
+  expires_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
