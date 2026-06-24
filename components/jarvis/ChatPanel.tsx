@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useJarvis } from './VoiceAssistant'
 
 export default function ChatPanel() {
-  const { commandHistory, lastResponse, sendTextMessage } = useJarvis()
+  const { commandHistory, lastResponse, displayedResponse, isTyping, sendTextMessage } = useJarvis()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [input, setInput] = useState('')
 
@@ -12,7 +12,7 @@ export default function ChatPanel() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [commandHistory, lastResponse])
+  }, [commandHistory, displayedResponse, isTyping])
 
   const handleSend = async () => {
     const text = input.trim()
@@ -41,17 +41,22 @@ export default function ChatPanel() {
         )}
 
         {commandHistory.map((cmd, i) => {
-          const resp = i === commandHistory.length - 1 ? lastResponse : ''
+          const isLatest = i === commandHistory.length - 1
+          const resp = isLatest ? displayedResponse : ''
+          const showCursor = isLatest && isTyping
           return (
             <div key={i} className="space-y-2 group">
               <div className="flex items-start gap-2">
                 <span className="text-blue-500/50 text-[10px] mt-0.5 shrink-0">$</span>
                 <span className="text-blue-300/90 text-xs break-words">{cmd}</span>
               </div>
-              {resp && (
+              {(resp || showCursor) && (
                 <div className="flex items-start gap-2 pl-4 border-l border-blue-500/20">
                   <span className="text-blue-400/50 text-[10px] mt-0.5 shrink-0">▸</span>
-                  <span className="text-blue-300/70 text-xs break-words leading-relaxed">{resp}</span>
+                  <span className="text-blue-300/70 text-xs break-words leading-relaxed">
+                    {resp}
+                    {showCursor && <span className="animate-pulse text-blue-400/70">▊</span>}
+                  </span>
                 </div>
               )}
             </div>

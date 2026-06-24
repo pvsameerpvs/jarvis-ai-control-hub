@@ -12,16 +12,23 @@ import {
 
 type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking' | 'executing' | 'error'
 
+const TYPING_SPEED_MS = 25
+
 interface JarvisContextValue {
   voiceState: VoiceState
   setVoiceState: (state: VoiceState) => void
   lastResponse: string
   setLastResponse: (response: string) => void
+  displayedResponse: string
+  setDisplayedResponse: (response: string) => void
+  isTyping: boolean
   commandHistory: string[]
   addToHistory: (command: string) => void
   highlightedPanel: string | null
   setHighlightedPanel: (panel: string | null) => void
   sendTextMessage: (text: string) => Promise<void>
+  startTypingEffect: (text: string, onComplete?: () => void) => void
+  stopTyping: () => void
 }
 
 const JarvisContext = createContext<JarvisContextValue | undefined>(undefined)
@@ -37,8 +44,41 @@ export function useJarvis(): JarvisContextValue {
 export function JarvisProvider({ children }: { children: ReactNode }) {
   const [voiceState, setVoiceState] = useState<VoiceState>('idle')
   const [lastResponse, setLastResponse] = useState('')
+  const [displayedResponse, setDisplayedResponse] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const typingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [commandHistory, setCommandHistory] = useState<string[]>([])
   const [highlightedPanel, setHighlightedPanel] = useState<string | null>(null)
+
+  const stopTyping = useCallback(() => {
+    if (typingRef.current) {
+      clearInterval(typingRef.current)
+      typingRef.current = null
+    }
+    setIsTyping(false)
+  }, [])
+
+  const startTypingEffect = useCallback((fullText: string, onComplete?: () => void) => {
+    stopTyping()
+    setDisplayedResponse('')
+    if (!fullText) {
+      onComplete?.()
+      return
+    }
+
+    setIsTyping(true)
+    let index = 0
+    typingRef.current = setInterval(() => {
+      index++
+      if (index >= fullText.length) {
+        setDisplayedResponse(fullText)
+        stopTyping()
+        onComplete?.()
+      } else {
+        setDisplayedResponse(fullText.slice(0, index + 1))
+      }
+    }, TYPING_SPEED_MS)
+  }, [stopTyping])
 
   const addToHistory = useCallback((command: string) => {
     setCommandHistory((prev) => [command, ...prev].slice(0, 50))
@@ -47,6 +87,8 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
   const sendTextMessage = useCallback(async (text: string) => {
     addToHistory(text)
     setLastResponse('')
+    setDisplayedResponse('')
+    stopTyping()
     setVoiceState('processing')
     try {
       const res = await fetch('/api/agent', {
@@ -57,12 +99,15 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
       const data = await res.json()
       const responseText = data.response || data.message || JSON.stringify(data)
       setLastResponse(responseText)
+      startTypingEffect(responseText)
       setVoiceState('idle')
     } catch {
-      setLastResponse('Command failed. Please try again.')
+      const errMsg = 'Command failed. Please try again.'
+      setLastResponse(errMsg)
+      setDisplayedResponse(errMsg)
       setVoiceState('error')
     }
-  }, [addToHistory])
+  }, [addToHistory, stopTyping, startTypingEffect])
 
   return (
     <JarvisContext.Provider
@@ -71,11 +116,16 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
         setVoiceState,
         lastResponse,
         setLastResponse,
+        displayedResponse,
+        setDisplayedResponse,
+        isTyping,
         commandHistory,
         addToHistory,
         highlightedPanel,
         setHighlightedPanel,
         sendTextMessage,
+        startTypingEffect,
+        stopTyping,
       }}
     >
       {children}
@@ -106,11 +156,11 @@ const SILENCE_MS = 1200
 const SPEECH_THRESHOLD = 0.02
 
 export default function VoiceAssistant() {
-  const { voiceState, setVoiceState, lastResponse, setLastResponse, addToHistory } = useJarvis()
+  const { voiceState, setVoiceState, lastResponse, setLastResponse, addToHistory, startTypingEffect, stopTyping, setDisplayedResponse } = useJarvis()
 
   const [transcript, setTranscript] = useState('')
   const [micSupported, setMicSupported] = useState(true)
-  const [voiceEnabled, setVoiceEnabled] = useState(true)
+  const [voiceEnabled, setVoiceEnabled] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
 
   const streamRef = useRef<MediaStream | null>(null)
@@ -121,10 +171,11 @@ export default function VoiceAssistant() {
   const speakingRef = useRef(false)
   const recordedChunksRef = useRef<Blob[]>([])
   const autoStartedRef = useRef(false)
-  const voiceEnabledRef = useRef(true)
+  const voiceEnabledRef = useRef(false)
   const synthesisRef = useRef<SpeechSynthesis | null>(null)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
   const isProcessingRef = useRef(false)
+  const startListeningRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -174,6 +225,7 @@ export default function VoiceAssistant() {
     isProcessingRef.current = true
     addToHistory(command)
     setVoiceState('processing')
+    stopTyping()
 
     try {
       const response = await fetch('/api/agent', {
@@ -182,44 +234,32 @@ export default function VoiceAssistant() {
         body: JSON.stringify({ command, transcript: command, timestamp: new Date().toISOString() }),
       })
 
-      if (!voiceEnabledRef.current) {
-        isProcessingRef.current = false
-        return
-      }
-
       if (!response.ok) throw new Error(`API error: ${response.status}`)
 
       const data = await response.json()
       const responseText = data.response || data.message || JSON.stringify(data)
       setLastResponse(responseText)
+      setVoiceState('idle')
+      setDisplayedResponse(responseText)
 
-      if (!voiceEnabledRef.current) {
-        isProcessingRef.current = false
-        return
-      }
-
-      if (data.action === 'tool_execution') {
-        setVoiceState('executing')
-        setTimeout(() => {
-          setVoiceState('idle')
-          if (responseText) speakResponse(responseText)
-        }, 1000)
-      } else {
-        speakResponse(responseText)
+      if (voiceEnabledRef.current && responseText) {
+        if (data.action === 'tool_execution') {
+          setTimeout(() => speakResponse(responseText), 1000)
+        } else {
+          speakResponse(responseText)
+        }
       }
     } catch {
-      if (!voiceEnabledRef.current) {
-        isProcessingRef.current = false
-        return
-      }
       setVoiceState('error')
-      setLastResponse('Command failed. Please try again.')
+      const errMsg = 'Command failed. Please try again.'
+      setLastResponse(errMsg)
+      setDisplayedResponse(errMsg)
       setTimeout(() => {
-        if (voiceEnabledRef.current) startListening()
+        if (voiceEnabledRef.current) startListeningRef.current?.()
       }, 2000)
     }
     isProcessingRef.current = false
-  }, [addToHistory, speakResponse])
+  }, [addToHistory, speakResponse, stopTyping])
 
   const transcribeAndSend = useCallback(async () => {
     if (recordedChunksRef.current.length === 0) return
@@ -286,6 +326,7 @@ export default function VoiceAssistant() {
   }, [])
 
   const startListening = useCallback(async () => {
+    startListeningRef.current = startListening
     if (!voiceEnabledRef.current) return
     voiceEnabledRef.current = true
     stopMic()
@@ -332,7 +373,7 @@ export default function VoiceAssistant() {
     if (autoStartedRef.current) return
     autoStartedRef.current = true
     const timer = setTimeout(() => {
-      if (micSupported) startListening()
+      if (micSupported && voiceEnabledRef.current) startListening()
     }, 800)
     return () => clearTimeout(timer)
   }, [micSupported, startListening])
@@ -341,9 +382,11 @@ export default function VoiceAssistant() {
     if (voiceEnabled) {
       synthesisRef.current?.cancel()
       stopMic()
+      stopTyping()
       setVoiceState('idle')
       setTranscript('')
       setLastResponse('')
+      setDisplayedResponse('')
       setVoiceEnabled(false)
       voiceEnabledRef.current = false
     } else {
@@ -351,7 +394,7 @@ export default function VoiceAssistant() {
       voiceEnabledRef.current = true
       setTimeout(() => startListening(), 300)
     }
-  }, [voiceEnabled, startListening, stopMic, setLastResponse])
+  }, [voiceEnabled, startListening, stopMic, stopTyping, setLastResponse, setDisplayedResponse])
 
   const isVoiceActive = voiceState !== 'idle'
 
