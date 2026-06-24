@@ -1,0 +1,38 @@
+{
+  "name": "jarvis-ai-control-hub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "J.A.R.V.I.S AI Control Hub - Universal AI Desktop Assistant",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "electron": "electron --no-sandbox .",
+    "dev:electron": "next build && next start & sleep 3 && electron --no-sandbox .",
+    "dev:electron:dev": "next dev & sleep 5 && electron --no-sandbox .",
+    "migrate": "tsx lib/db/migrate.ts",
+    "seed": "tsx lib/db/seed.ts",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@google/genai": "^1.0.0",
+    "better-sqlite3": "^11.6.0",
+    "next": "^14.2.0",
+    "playwright": "^1.48.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.0",
+    "electron": "^32.0.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}
