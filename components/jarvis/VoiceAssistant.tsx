@@ -182,11 +182,21 @@ export default function VoiceAssistant() {
         body: JSON.stringify({ command, transcript: command, timestamp: new Date().toISOString() }),
       })
 
+      if (!voiceEnabledRef.current) {
+        isProcessingRef.current = false
+        return
+      }
+
       if (!response.ok) throw new Error(`API error: ${response.status}`)
 
       const data = await response.json()
       const responseText = data.response || data.message || JSON.stringify(data)
       setLastResponse(responseText)
+
+      if (!voiceEnabledRef.current) {
+        isProcessingRef.current = false
+        return
+      }
 
       if (data.action === 'tool_execution') {
         setVoiceState('executing')
@@ -198,6 +208,10 @@ export default function VoiceAssistant() {
         speakResponse(responseText)
       }
     } catch {
+      if (!voiceEnabledRef.current) {
+        isProcessingRef.current = false
+        return
+      }
       setVoiceState('error')
       setLastResponse('Command failed. Please try again.')
       setTimeout(() => {
@@ -219,6 +233,8 @@ export default function VoiceAssistant() {
     try {
       const res = await fetch('/api/transcribe', { method: 'POST', body: formData })
       if (!res.ok) throw new Error('Transcription failed')
+
+      if (!voiceEnabledRef.current) return
 
       const { text } = await res.json()
       if (text?.trim()) {
