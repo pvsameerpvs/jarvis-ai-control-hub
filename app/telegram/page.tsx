@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import GlassCard from '@/components/shared/GlassCard'
 import Button from '@/components/shared/Button'
 import StatusBadge from '@/components/shared/StatusBadge'
-import BottomDock from '@/components/jarvis/BottomDock'
+import HudPageLayout from '@/components/jarvis/HudPageLayout'
 
 interface TelegramLog {
   timestamp: string
@@ -31,144 +31,76 @@ export default function TelegramPage() {
       .catch(() => {})
   }, [])
 
-  const sendMessage = async (text: string) => {
-    setError('')
+  const handleSend = async () => {
+    if (!message.trim()) return
     setSending(true)
+    setError('')
     try {
       const res = await fetch('/api/telegram/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: message.trim() }),
       })
       if (!res.ok) throw new Error('Send failed')
-      const data = await res.json()
-      const logSent: TelegramLog = { timestamp: new Date().toLocaleTimeString(), message: text, status: 'sent' }
-      setLogs((prev) => [logSent, ...prev].slice(0, 50))
-      return data
+      const logEntry: TelegramLog = { timestamp: new Date().toLocaleTimeString(), message: message.trim(), status: 'sent' }
+      setLogs((prev) => [logEntry, ...prev].slice(0, 50))
+      setMessage('')
     } catch (err) {
-      const logFailed: TelegramLog = { timestamp: new Date().toLocaleTimeString(), message: text, status: 'failed' }
-      setLogs((prev) => [logFailed, ...prev].slice(0, 50))
-      throw err
+      setError(err instanceof Error ? err.message : 'Failed to send message')
+      const logEntry: TelegramLog = { timestamp: new Date().toLocaleTimeString(), message: message.trim(), status: 'failed' }
+      setLogs((prev) => [logEntry, ...prev].slice(0, 50))
     } finally {
       setSending(false)
     }
   }
 
-  const handleSendTest = async () => {
-    try {
-      await sendMessage('Test from J.A.R.V.I.S')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send test message')
-    }
-  }
-
-  const handleSendReport = async () => {
-    setError('')
-    try {
-      const reportMessage = `J.A.R.V.I.S Daily Report - ${new Date().toLocaleDateString()}\n\nSystem Status: Online\nAll subsystems operational.`
-      const res = await fetch('/api/telegram/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: reportMessage }),
-      })
-      if (!res.ok) throw new Error('Report failed')
-      const reportSent: TelegramLog = { timestamp: new Date().toLocaleTimeString(), message: 'Today summary report sent', status: 'sent' }
-      setLogs((prev) => [reportSent, ...prev].slice(0, 50))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send report')
-      const reportFailed: TelegramLog = { timestamp: new Date().toLocaleTimeString(), message: 'Today summary report', status: 'failed' }
-      setLogs((prev) => [reportFailed, ...prev].slice(0, 50))
-    }
-  }
-
-  const handleSendCustom = async () => {
-    if (!message.trim()) return
-    try {
-      await sendMessage(message.trim())
-      setMessage('')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send message')
-    }
-  }
-
   return (
-    <div className="min-h-screen bg-background bg-grid-pattern">
-      <div className="relative z-10 min-h-screen flex flex-col pb-24">
-        <header className="flex items-center justify-between px-6 py-4 border-b border-panel-border/30">
-          <h1 className="text-lg font-mono text-primary-glow font-bold tracking-[0.15em] text-glow">
-            TELEGRAM CONTROL
-          </h1>
-        </header>
+    <HudPageLayout title="TELEGRAM CONTROL" subtitle="messaging interface">
+      {error && (
+        <div className="p-3 rounded-lg bg-hud-error/10 border border-hud-error/30">
+          <p className="text-xs font-mono text-hud-error">{error}</p>
+        </div>
+      )}
 
-        <main className="flex-1 px-4 py-6 max-w-4xl mx-auto w-full space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <GlassCard title="Bot Token">
-              <StatusBadge status={botConfigured ? 'connected' : 'disconnected'} label={botConfigured ? 'Configured' : 'Not Configured'} />
-              {!botConfigured && (
-                <p className="text-xs font-mono text-hud-muted/50 mt-2">Set bot token in Settings</p>
-              )}
-            </GlassCard>
-            <GlassCard title="Chat ID">
-              <StatusBadge status={chatIdConfigured ? 'connected' : 'disconnected'} label={chatIdConfigured ? 'Configured' : 'Not Configured'} />
-              {!chatIdConfigured && (
-                <p className="text-xs font-mono text-hud-muted/50 mt-2">Set Chat ID in Settings</p>
-              )}
-            </GlassCard>
+      <GlassCard title="Send Message">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <StatusBadge status={botConfigured ? 'connected' : 'disconnected'} label={botConfigured ? 'Bot Configured' : 'Bot Not Set'} />
+            <StatusBadge status={chatIdConfigured ? 'connected' : 'disconnected'} label={chatIdConfigured ? 'Chat ID Set' : 'Chat ID Missing'} />
           </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              placeholder="Type your message..."
+              className="flex-1 rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
+            />
+            <Button onClick={handleSend} loading={sending} disabled={!message.trim()}>
+              Send
+            </Button>
+          </div>
+        </div>
+      </GlassCard>
 
-          {error && (
-            <div className="p-3 rounded-lg bg-hud-error/10 border border-hud-error/30">
-              <p className="text-xs font-mono text-hud-error">{error}</p>
-            </div>
+      <GlassCard title="Message Logs">
+        <div className="max-h-72 overflow-y-auto space-y-2">
+          {logs.length === 0 ? (
+            <p className="text-xs font-mono text-hud-muted/30 text-center py-4">No messages sent yet</p>
+          ) : (
+            logs.map((log, i) => (
+              <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-deep-blue/40 border border-panel-border/20">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${log.status === 'sent' ? 'bg-hud-success shadow-[0_0_4px_rgba(34,197,94,0.6)]' : 'bg-hud-error shadow-[0_0_4px_rgba(251,113,133,0.6)]'}`} />
+                  <span className="text-xs font-mono text-hud-text/70 truncate">{log.message}</span>
+                </div>
+                <span className="text-[10px] font-mono text-hud-muted/40 ml-3">{log.timestamp}</span>
+              </div>
+            ))
           )}
-
-          <GlassCard title="Send Message">
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendCustom()}
-                  placeholder="Type a message..."
-                  className="flex-1 rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
-                />
-                <Button onClick={handleSendCustom} loading={sending} disabled={!message.trim()}>
-                  Send
-                </Button>
-              </div>
-              <div className="flex gap-3">
-                <Button onClick={handleSendTest} loading={sending} variant="secondary" size="sm">
-                  Send Test Message
-                </Button>
-                <Button onClick={handleSendReport} loading={sending} variant="secondary" size="sm">
-                  Send Report
-                </Button>
-              </div>
-            </div>
-          </GlassCard>
-
-          <GlassCard title="Telegram Logs">
-            <div className="max-h-60 overflow-y-auto space-y-2">
-              {logs.length === 0 ? (
-                <p className="text-xs font-mono text-hud-muted/30 text-center py-4">No messages sent yet</p>
-              ) : (
-                logs.map((log, i) => (
-                  <div key={i} className="flex items-center justify-between p-2 rounded bg-deep-blue/40 border border-panel-border/20">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <StatusBadge status={log.status === 'sent' ? 'connected' : 'disconnected'} />
-                      <span className="text-xs font-mono text-hud-text/70 truncate">{log.message}</span>
-                    </div>
-                    <span className="text-[10px] font-mono text-hud-muted/40 shrink-0">{log.timestamp}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </GlassCard>
-        </main>
-      </div>
-
-      <BottomDock />
-    </div>
+        </div>
+      </GlassCard>
+    </HudPageLayout>
   )
 }

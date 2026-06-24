@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import GlassCard from '@/components/shared/GlassCard'
 import Button from '@/components/shared/Button'
 import StatusBadge from '@/components/shared/StatusBadge'
-import BottomDock from '@/components/jarvis/BottomDock'
+import HudPageLayout from '@/components/jarvis/HudPageLayout'
 
 interface Settings {
   gemini_api_key?: string
@@ -99,193 +99,181 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background bg-grid-pattern">
-      <div className="relative z-10 min-h-screen flex flex-col pb-24">
-        <header className="flex items-center justify-between px-6 py-4 border-b border-panel-border/30">
-          <h1 className="text-lg font-mono text-primary-glow font-bold tracking-[0.15em] text-glow">
-            SETTINGS
-          </h1>
-        </header>
+    <HudPageLayout title="SETTINGS" subtitle="system configuration">
+      {error && (
+        <div className="p-3 rounded-lg bg-hud-error/10 border border-hud-error/30">
+          <p className="text-xs font-mono text-hud-error">{error}</p>
+        </div>
+      )}
 
-        <main className="flex-1 px-4 py-6 max-w-4xl mx-auto w-full space-y-6">
-          {error && (
-            <div className="p-3 rounded-lg bg-hud-error/10 border border-hud-error/30">
-              <p className="text-xs font-mono text-hud-error">{error}</p>
-            </div>
+      {success && (
+        <div className="p-3 rounded-lg bg-hud-success/10 border border-hud-success/30">
+          <p className="text-xs font-mono text-hud-success">{success}</p>
+        </div>
+      )}
+
+      <GlassCard title="Gemini AI">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono text-hud-muted">API Key</span>
+            <StatusBadge status={settings.gemini_api_key ? 'connected' : 'disconnected'} label={settings.gemini_api_key ? 'Configured' : 'Not Set'} />
+          </div>
+          {settings.gemini_api_key && (
+            <p className="text-xs font-mono text-hud-muted/50 font-mono">{maskKey(settings.gemini_api_key)}</p>
           )}
+          <div className="flex gap-2">
+            <input
+              type="password"
+              value={geminiKey}
+              onChange={(e) => setGeminiKey(e.target.value)}
+              placeholder="Enter Gemini API Key"
+              className="flex-1 rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
+            />
+            <Button onClick={() => saveSettings('Gemini API', { gemini_api_key: geminiKey })} loading={saving === 'Gemini API'} disabled={!geminiKey.trim()}>
+              Save
+            </Button>
+          </div>
+        </div>
+      </GlassCard>
 
-          {success && (
-            <div className="p-3 rounded-lg bg-hud-success/10 border border-hud-success/30">
-              <p className="text-xs font-mono text-hud-success">{success}</p>
+      <GlassCard title="Gmail OAuth">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">Client ID</label>
+            <input
+              type="password"
+              value={gmailClientId}
+              onChange={(e) => setGmailClientId(e.target.value)}
+              placeholder="Google OAuth Client ID"
+              className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">Client Secret</label>
+            <input
+              type="password"
+              value={gmailClientSecret}
+              onChange={(e) => setGmailClientSecret(e.target.value)}
+              placeholder="Google OAuth Client Secret"
+              className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
+            />
+          </div>
+          <Button onClick={() => saveSettings('Gmail OAuth', { gmail_client_id: gmailClientId, gmail_client_secret: gmailClientSecret })} loading={saving === 'Gmail OAuth'}>
+            Save
+          </Button>
+        </div>
+      </GlassCard>
+
+      <GlassCard title="Telegram">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">Bot Token</label>
+            <input
+              type="password"
+              value={telegramBotToken}
+              onChange={(e) => setTelegramBotToken(e.target.value)}
+              placeholder="Telegram Bot Token"
+              className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">Chat ID</label>
+            <input
+              type="text"
+              value={telegramChatId}
+              onChange={(e) => setTelegramChatId(e.target.value)}
+              placeholder="Telegram Chat ID"
+              className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
+            />
+          </div>
+          <Button onClick={() => saveSettings('Telegram', { telegram_bot_token: telegramBotToken, telegram_chat_id: telegramChatId })} loading={saving === 'Telegram'}>
+            Save
+          </Button>
+        </div>
+      </GlassCard>
+
+      <GlassCard title="Project & Editor">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">Default Project Folder</label>
+            <input
+              type="text"
+              value={projectFolder}
+              onChange={(e) => setProjectFolder(e.target.value)}
+              placeholder="/path/to/projects"
+              className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">VS Code Command</label>
+            <input
+              type="text"
+              value={vscodeCommand}
+              onChange={(e) => setVscodeCommand(e.target.value)}
+              placeholder="code"
+              className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
+            />
+          </div>
+          <Button onClick={() => saveSettings('Project', { default_project_folder: projectFolder, vscode_command: vscodeCommand })} loading={saving === 'Project'}>
+            Save
+          </Button>
+        </div>
+      </GlassCard>
+
+      <GlassCard title="Database">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono text-hud-muted">Database Path</span>
+          </div>
+          <p className="text-xs font-mono text-hud-text/70 bg-deep-blue/40 border border-panel-border/30 rounded-lg px-4 py-2.5">
+            {settings.db_path || '/path/to/jarvis.db'}
+          </p>
+        </div>
+      </GlassCard>
+
+      <GlassCard title="Voice Settings">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">
+              Rate: {voiceRate.toFixed(1)}
+            </label>
+            <input
+              type="range"
+              min="0.5"
+              max="2"
+              step="0.1"
+              value={voiceRate}
+              onChange={(e) => setVoiceRate(parseFloat(e.target.value))}
+              className="w-full h-1.5 rounded-full appearance-none bg-deep-blue border border-panel-border/30 cursor-pointer accent-primary-glow [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary-glow [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(0,229,255,0.5)]"
+            />
+            <div className="flex justify-between text-[10px] font-mono text-hud-muted/40 mt-1">
+              <span>Slow</span>
+              <span>Fast</span>
             </div>
-          )}
-
-          <GlassCard title="Gemini AI">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono text-hud-muted">API Key</span>
-                <StatusBadge status={settings.gemini_api_key ? 'connected' : 'disconnected'} label={settings.gemini_api_key ? 'Configured' : 'Not Set'} />
-              </div>
-              {settings.gemini_api_key && (
-                <p className="text-xs font-mono text-hud-muted/50 font-mono">{maskKey(settings.gemini_api_key)}</p>
-              )}
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={geminiKey}
-                  onChange={(e) => setGeminiKey(e.target.value)}
-                  placeholder="Enter Gemini API Key"
-                  className="flex-1 rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
-                />
-                <Button onClick={() => saveSettings('Gemini API', { gemini_api_key: geminiKey })} loading={saving === 'Gemini API'} disabled={!geminiKey.trim()}>
-                  Save
-                </Button>
-              </div>
+          </div>
+          <div>
+            <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">
+              Pitch: {voicePitch.toFixed(1)}
+            </label>
+            <input
+              type="range"
+              min="0.5"
+              max="2"
+              step="0.1"
+              value={voicePitch}
+              onChange={(e) => setVoicePitch(parseFloat(e.target.value))}
+              className="w-full h-1.5 rounded-full appearance-none bg-deep-blue border border-panel-border/30 cursor-pointer accent-primary-glow [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary-glow [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(0,229,255,0.5)]"
+            />
+            <div className="flex justify-between text-[10px] font-mono text-hud-muted/40 mt-1">
+              <span>Low</span>
+              <span>High</span>
             </div>
-          </GlassCard>
-
-          <GlassCard title="Gmail OAuth">
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">Client ID</label>
-                <input
-                  type="password"
-                  value={gmailClientId}
-                  onChange={(e) => setGmailClientId(e.target.value)}
-                  placeholder="Google OAuth Client ID"
-                  className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">Client Secret</label>
-                <input
-                  type="password"
-                  value={gmailClientSecret}
-                  onChange={(e) => setGmailClientSecret(e.target.value)}
-                  placeholder="Google OAuth Client Secret"
-                  className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
-                />
-              </div>
-              <Button onClick={() => saveSettings('Gmail OAuth', { gmail_client_id: gmailClientId, gmail_client_secret: gmailClientSecret })} loading={saving === 'Gmail OAuth'}>
-                Save
-              </Button>
-            </div>
-          </GlassCard>
-
-          <GlassCard title="Telegram">
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">Bot Token</label>
-                <input
-                  type="password"
-                  value={telegramBotToken}
-                  onChange={(e) => setTelegramBotToken(e.target.value)}
-                  placeholder="Telegram Bot Token"
-                  className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">Chat ID</label>
-                <input
-                  type="text"
-                  value={telegramChatId}
-                  onChange={(e) => setTelegramChatId(e.target.value)}
-                  placeholder="Telegram Chat ID"
-                  className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
-                />
-              </div>
-              <Button onClick={() => saveSettings('Telegram', { telegram_bot_token: telegramBotToken, telegram_chat_id: telegramChatId })} loading={saving === 'Telegram'}>
-                Save
-              </Button>
-            </div>
-          </GlassCard>
-
-          <GlassCard title="Project & Editor">
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">Default Project Folder</label>
-                <input
-                  type="text"
-                  value={projectFolder}
-                  onChange={(e) => setProjectFolder(e.target.value)}
-                  placeholder="/path/to/projects"
-                  className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">VS Code Command</label>
-                <input
-                  type="text"
-                  value={vscodeCommand}
-                  onChange={(e) => setVscodeCommand(e.target.value)}
-                  placeholder="code"
-                  className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
-                />
-              </div>
-              <Button onClick={() => saveSettings('Project', { default_project_folder: projectFolder, vscode_command: vscodeCommand })} loading={saving === 'Project'}>
-                Save
-              </Button>
-            </div>
-          </GlassCard>
-
-          <GlassCard title="Database">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono text-hud-muted">Database Path</span>
-              </div>
-              <p className="text-xs font-mono text-hud-text/70 bg-deep-blue/40 border border-panel-border/30 rounded-lg px-4 py-2.5">
-                {settings.db_path || '/path/to/jarvis.db'}
-              </p>
-            </div>
-          </GlassCard>
-
-          <GlassCard title="Voice Settings">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">
-                  Rate: {voiceRate.toFixed(1)}
-                </label>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="2"
-                  step="0.1"
-                  value={voiceRate}
-                  onChange={(e) => setVoiceRate(parseFloat(e.target.value))}
-                  className="w-full h-1.5 rounded-full appearance-none bg-deep-blue border border-panel-border/30 cursor-pointer accent-primary-glow [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary-glow [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(0,229,255,0.5)]"
-                />
-                <div className="flex justify-between text-[10px] font-mono text-hud-muted/40 mt-1">
-                  <span>Slow</span>
-                  <span>Fast</span>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">
-                  Pitch: {voicePitch.toFixed(1)}
-                </label>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="2"
-                  step="0.1"
-                  value={voicePitch}
-                  onChange={(e) => setVoicePitch(parseFloat(e.target.value))}
-                  className="w-full h-1.5 rounded-full appearance-none bg-deep-blue border border-panel-border/30 cursor-pointer accent-primary-glow [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary-glow [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(0,229,255,0.5)]"
-                />
-                <div className="flex justify-between text-[10px] font-mono text-hud-muted/40 mt-1">
-                  <span>Low</span>
-                  <span>High</span>
-                </div>
-              </div>
-              <Button onClick={() => saveSettings('Voice', { voice_rate: voiceRate, voice_pitch: voicePitch })} loading={saving === 'Voice'}>
-                Save
-              </Button>
-            </div>
-          </GlassCard>
-        </main>
-      </div>
-
-      <BottomDock />
-    </div>
+          </div>
+          <Button onClick={() => saveSettings('Voice', { voice_rate: voiceRate, voice_pitch: voicePitch })} loading={saving === 'Voice'}>
+            Save
+          </Button>
+        </div>
+      </GlassCard>
+    </HudPageLayout>
   )
 }

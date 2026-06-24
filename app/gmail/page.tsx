@@ -4,7 +4,7 @@ import { useState } from 'react'
 import GlassCard from '@/components/shared/GlassCard'
 import Button from '@/components/shared/Button'
 import StatusBadge from '@/components/shared/StatusBadge'
-import BottomDock from '@/components/jarvis/BottomDock'
+import HudPageLayout from '@/components/jarvis/HudPageLayout'
 
 interface Email {
   id: string
@@ -108,113 +108,109 @@ export default function GmailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background bg-grid-pattern">
-      <div className="relative z-10 min-h-screen flex flex-col pb-24">
-        <header className="flex items-center justify-between px-6 py-4 border-b border-panel-border/30">
-          <h1 className="text-lg font-mono text-primary-glow font-bold tracking-[0.15em] text-glow">
-            GMAIL INTEGRATION
-          </h1>
-          <StatusBadge status={connected ? 'connected' : 'disconnected'} label={connected ? 'Connected' : 'Disconnected'} />
-        </header>
+    <HudPageLayout
+      title="GMAIL INTEGRATION"
+      subtitle="email command module"
+      badge={
+        <StatusBadge
+          status={connected ? 'connected' : 'disconnected'}
+          label={connected ? 'Connected' : 'Disconnected'}
+        />
+      }
+    >
+      {!connected && (
+        <GlassCard title="Gmail OAuth">
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-sm font-mono text-hud-muted/70 text-center">
+              Connect your Google account to enable Gmail integration
+            </p>
+            <Button onClick={handleConnect} loading={connecting}>
+              Connect Gmail
+            </Button>
+          </div>
+        </GlassCard>
+      )}
 
-        <main className="flex-1 px-4 py-6 max-w-4xl mx-auto w-full space-y-6">
-          {!connected && (
-            <GlassCard title="Gmail OAuth">
-              <div className="flex flex-col items-center gap-4">
-                <p className="text-sm font-mono text-hud-muted/70 text-center">
-                  Connect your Google account to enable Gmail integration
-                </p>
-                <Button onClick={handleConnect} loading={connecting}>
-                  Connect Gmail
-                </Button>
-              </div>
+      {error && (
+        <div className="p-3 rounded-lg bg-hud-error/10 border border-hud-error/30">
+          <p className="text-xs font-mono text-hud-error">{error}</p>
+        </div>
+      )}
+
+      {connected && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <GlassCard title="Today's Mail">
+              <p className="text-3xl font-mono text-primary-glow font-bold text-glow-sm">
+                {todayCount !== null ? todayCount : '---'}
+              </p>
+              <Button onClick={fetchCounts} size="sm" loading={loading === 'counts'} className="mt-3">
+                Refresh Count
+              </Button>
             </GlassCard>
-          )}
+            <GlassCard title="Unread Mail">
+              <p className="text-3xl font-mono text-hud-warning font-bold text-glow-sm">
+                {unreadCount !== null ? unreadCount : '---'}
+              </p>
+              <Button onClick={fetchCounts} size="sm" loading={loading === 'counts'} className="mt-3">
+                Refresh Count
+              </Button>
+            </GlassCard>
+          </div>
 
-          {error && (
-            <div className="p-3 rounded-lg bg-hud-error/10 border border-hud-error/30">
-              <p className="text-xs font-mono text-hud-error">{error}</p>
+          <GlassCard title="Search Email">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="Search emails..."
+                className="flex-1 rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
+              />
+              <Button onClick={handleSearch} loading={loading === 'emails'}>
+                Search
+              </Button>
             </div>
-          )}
+          </GlassCard>
 
-          {connected && (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <GlassCard title="Today's Mail">
-                  <p className="text-3xl font-mono text-primary-glow font-bold text-glow-sm">
-                    {todayCount !== null ? todayCount : '---'}
-                  </p>
-                  <Button onClick={fetchCounts} size="sm" loading={loading === 'counts'} className="mt-3">
-                    Refresh Count
-                  </Button>
-                </GlassCard>
-                <GlassCard title="Unread Mail">
-                  <p className="text-3xl font-mono text-hud-warning font-bold text-glow-sm">
-                    {unreadCount !== null ? unreadCount : '---'}
-                  </p>
-                  <Button onClick={fetchCounts} size="sm" loading={loading === 'counts'} className="mt-3">
-                    Refresh Count
-                  </Button>
-                </GlassCard>
-              </div>
-
-              <GlassCard title="Search Email">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    placeholder="Search emails..."
-                    className="flex-1 rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
-                  />
-                  <Button onClick={handleSearch} loading={loading === 'emails'}>
-                    Search
-                  </Button>
-                </div>
-              </GlassCard>
-
-              <GlassCard title="Latest 10 Emails">
-                <div className="space-y-2">
-                  <Button onClick={fetchLatestEmails} size="sm" loading={loading === 'emails'}>
-                    Fetch Latest
-                  </Button>
-                  <div className="max-h-72 overflow-y-auto space-y-2 mt-3">
-                    {(searchResults.length > 0 ? searchResults : emails).map((email, i) => (
-                      <div key={email.id || i} className="p-3 rounded-lg bg-deep-blue/40 border border-panel-border/30">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-mono text-primary-glow/70 truncate">{email.from}</span>
-                          <span className="text-[10px] font-mono text-hud-muted/40">{email.date}</span>
-                        </div>
-                        <p className="text-xs font-mono text-hud-text/80 truncate">{email.subject}</p>
-                        <p className="text-[11px] font-mono text-hud-muted/50 mt-1 line-clamp-2">{email.snippet}</p>
-                      </div>
-                    ))}
-                    {(searchResults.length === 0 && emails.length === 0) && (
-                      <p className="text-xs font-mono text-hud-muted/30 text-center py-4">No emails loaded</p>
-                    )}
-                  </div>
-                </div>
-              </GlassCard>
-
-              <GlassCard title="Summarize Today's Emails">
-                <div className="space-y-3">
-                  <Button onClick={handleSummarize} loading={summarizing}>
-                    Generate Summary
-                  </Button>
-                  {summary && (
-                    <div className="p-4 rounded-lg bg-primary-glow/5 border border-primary-glow/20">
-                      <p className="text-sm font-mono text-hud-text/90 leading-relaxed whitespace-pre-wrap">{summary}</p>
+          <GlassCard title="Latest 10 Emails">
+            <div className="space-y-2">
+              <Button onClick={fetchLatestEmails} size="sm" loading={loading === 'emails'}>
+                Fetch Latest
+              </Button>
+              <div className="max-h-72 overflow-y-auto space-y-2 mt-3">
+                {(searchResults.length > 0 ? searchResults : emails).map((email, i) => (
+                  <div key={email.id || i} className="p-3 rounded-lg bg-deep-blue/40 border border-panel-border/30">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-mono text-primary-glow/70 truncate">{email.from}</span>
+                      <span className="text-[10px] font-mono text-hud-muted/40">{email.date}</span>
                     </div>
-                  )}
-                </div>
-              </GlassCard>
-            </>
-          )}
-        </main>
-      </div>
+                    <p className="text-xs font-mono text-hud-text/80 truncate">{email.subject}</p>
+                    <p className="text-[11px] font-mono text-hud-muted/50 mt-1 line-clamp-2">{email.snippet}</p>
+                  </div>
+                ))}
+                {(searchResults.length === 0 && emails.length === 0) && (
+                  <p className="text-xs font-mono text-hud-muted/30 text-center py-4">No emails loaded</p>
+                )}
+              </div>
+            </div>
+          </GlassCard>
 
-      <BottomDock />
-    </div>
+          <GlassCard title="Summarize Today's Emails">
+            <div className="space-y-3">
+              <Button onClick={handleSummarize} loading={summarizing}>
+                Generate Summary
+              </Button>
+              {summary && (
+                <div className="p-4 rounded-lg bg-primary-glow/5 border border-primary-glow/20">
+                  <p className="text-sm font-mono text-hud-text/90 leading-relaxed whitespace-pre-wrap">{summary}</p>
+                </div>
+              )}
+            </div>
+          </GlassCard>
+        </>
+      )}
+    </HudPageLayout>
   )
 }
