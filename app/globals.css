@@ -1,0 +1,203 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary-glow: #00E5FF;
+    --secondary-blue: #2563EB;
+    --hud-text: #DFFBFF;
+    --hud-muted: #7DD3FC;
+    --panel-bg: rgba(2, 20, 45, 0.72);
+    --panel-border: rgba(0, 229, 255, 0.35);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: #020617;
+    color: var(--hud-text);
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(2, 20, 45, 0.5);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 229, 255, 0.3);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 229, 255, 0.5);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  ::selection {
+    background: rgba(0, 229, 255, 0.3);
+    color: #ffffff;
+  }
+}
+
+@layer components {
+  .hud-panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 12px;
+  }
+
+  .hud-panel-glow {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.1), inset 0 0 20px rgba(0, 229, 255, 0.03);
+  }
+
+  .hud-button {
+    background: rgba(0, 229, 255, 0.1);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    color: var(--hud-text);
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .hud-button:hover {
+    background: rgba(0, 229, 255, 0.2);
+    border-color: rgba(0, 229, 255, 0.5);
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+  }
+
+  .hud-button:active {
+    transform: scale(0.97);
+  }
+
+  .hud-input {
+    background: rgba(2, 20, 45, 0.8);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+    color: var(--hud-text);
+    border-radius: 8px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s ease;
+  }
+
+  .hud-input:focus {
+    border-color: var(--primary-glow);
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.15);
+  }
+
+  .hud-input::placeholder {
+    color: rgba(125, 211, 252, 0.4);
+  }
+
+  .scanline-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 229, 255, 0.015) 2px,
+      rgba(0, 229, 255, 0.015) 4px
+    );
+  }
+
+  .bg-grid-pattern {
+    background-image:
+      linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .orb {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(0, 229, 255, 0.4), rgba(37, 99, 235, 0.2), transparent);
+    box-shadow: 0 0 60px rgba(0, 229, 255, 0.2), 0 0 120px rgba(0, 229, 255, 0.1);
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .status-dot-active {
+    background: #22C55E;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+  }
+
+  .status-dot-inactive {
+    background: #FB7185;
+    box-shadow: 0 0 8px rgba(251, 113, 133, 0.6);
+  }
+
+  .status-dot-warning {
+    background: #FACC15;
+    box-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
+  }
+}
+
+@layer utilities {
+  .text-glow {
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.5), 0 0 20px rgba(0, 229, 255, 0.3);
+  }
+
+  .text-glow-sm {
+    text-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
+  }
+
+  .border-glow {
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+  }
+
+  .animate-delay-100 {
+    animation-delay: 0.1s;
+  }
+
+  .animate-delay-200 {
+    animation-delay: 0.2s;
+  }
+
+  .animate-delay-300 {
+    animation-delay: 0.3s;
+  }
+
+  .animate-delay-400 {
+    animation-delay: 0.4s;
+  }
+
+  .animate-delay-500 {
+    animation-delay: 0.5s;
+  }
+}
