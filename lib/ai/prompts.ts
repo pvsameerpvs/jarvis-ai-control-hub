@@ -19,8 +19,8 @@ GENERAL:
 - getCurrentTime: Get the current date and time
 - getSystemStatus: Get system status (memory, CPU, uptime)
 
-CAMERA — You can see through the camera like your own eyes:
-- openCamera: Open the camera. Use this whenever the user says "open camera", "check camera", "see what's in front", or anything about looking/seeing through camera
+CAMERA — You do NOT have camera access by default. You MUST call openCamera tool first before answering any camera question:
+- openCamera: CALL THIS FIRST — you cannot see anything until this tool executes. Must be called for ANY camera-related request like "see", "look", "what's in front", "check camera", "open camera"
 - captureCameraFrame: Capture a frame from camera
 - analyzeCameraImage: Analyze an image with a question — describe what you see in detail
 - explainVisibleObject: Explain objects visible in an image — identify everything you can see

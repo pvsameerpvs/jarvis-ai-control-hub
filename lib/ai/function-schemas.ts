@@ -37,7 +37,7 @@ export const generalTools: FunctionSchema[] = [
 export const cameraTools: FunctionSchema[] = [
   {
     name: 'openCamera',
-    description: 'Open the camera to see what is in front. Use this whenever the user asks to check, open, or look through the camera. This activates the visual feed so you can see.',
+    description: 'CRITICAL: You MUST call this tool first before answering any camera/vision question. You CANNOT see anything without calling this — the camera is not active until this runs. Use for any request about seeing, looking, checking, or opening the camera.',
     parameters: {
       type: 'OBJECT',
       description: 'No parameters needed',

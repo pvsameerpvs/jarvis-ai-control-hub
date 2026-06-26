@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import CameraPreview, { type CameraPreviewHandle } from '@/components/jarvis/CameraPreview'
 import BottomDock from '@/components/jarvis/BottomDock'
-import { useJarvis } from '@/components/jarvis/VoiceAssistant'
 
 function TimeDisplay() {
   const [time, setTime] = useState('')
@@ -63,13 +62,9 @@ export default function CameraPage() {
 
   useEffect(() => {
     if (autoStartDoneRef.current) return
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      if (params.get('auto') === 'true' && cameraStatus === 'idle') {
-        autoStartDoneRef.current = true
-        const timer = setTimeout(() => handleStartCamera(), 500)
-        return () => clearTimeout(timer)
-      }
+    if (typeof window !== 'undefined' && cameraStatus === 'idle') {
+      autoStartDoneRef.current = true
+      handleStartCamera()
     }
   }, [cameraStatus])
 
@@ -182,14 +177,24 @@ export default function CameraPage() {
     let active = true
     let intervalId: ReturnType<typeof setInterval> | null = null
 
+    const initialQuestion = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('q') || ''
+      : ''
+
     const tick = async () => {
       if (!active) return
       const img = cameraRef.current?.getCurrentFrame()
       if (!img) return
       try {
-        const text = await sendForAnalysis(img)
+        const text = await sendForAnalysis(img, initialQuestion || undefined)
         if (active) {
           addMessage('jarvis', text)
+          if (typeof window !== 'undefined' && 'speechSynthesis' in window && !window.speechSynthesis.speaking) {
+            const u = new SpeechSynthesisUtterance(text)
+            u.rate = 1.0
+            u.pitch = 0.9
+            window.speechSynthesis.speak(u)
+          }
         }
       } catch {
         // silent retry next tick
@@ -198,8 +203,8 @@ export default function CameraPage() {
 
     const startTimeout = setTimeout(() => {
       tick()
-      intervalId = setInterval(tick, 3000)
-    }, 1500)
+      intervalId = setInterval(tick, 10000)
+    }, 2000)
 
     return () => {
       active = false
@@ -208,23 +213,7 @@ export default function CameraPage() {
     }
   }, [cameraStatus, sendForAnalysis, addMessage])
 
-  const { voiceEnabled } = useJarvis()
   const isActive = cameraStatus === 'streaming' || cameraStatus === 'captured'
-
-  if (!voiceEnabled) {
-    return (
-      <div className="h-screen bg-background overflow-hidden relative">
-        <div className="fixed inset-0 z-20 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="border border-[#FB7185]/20 rounded-lg p-6 bg-[#0a0e1a]/60 text-center">
-            <span className="text-3xl text-[#FB7185]/40 block mb-3">◈</span>
-            <p className="font-mono text-sm text-[#FB7185]/70 tracking-[0.15em] uppercase mb-1">System Powered Off</p>
-            <p className="font-mono text-[9px] text-[#FB7185]/30 tracking-[0.1em]">Return to Dashboard to enable</p>
-          </div>
-        </div>
-        <BottomDock />
-      </div>
-    )
-  }
 
   return (
     <div className="h-screen bg-background overflow-hidden relative">
@@ -441,18 +430,6 @@ export default function CameraPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          {cameraStatus === 'idle' && (
-            <button onClick={handleStartCamera}
-              className="group relative px-8 py-2.5 rounded-lg bg-primary-glow/8 border border-primary-glow/25 text-xs font-mono text-primary-glow/90 tracking-[0.2em] uppercase
-                hover:bg-primary-glow/15 hover:border-primary-glow/40 hover:shadow-[0_0_25px_rgba(0,229,255,0.12)]
-                transition-all duration-300">
-              <span className="relative z-10 flex items-center gap-2">
-                <span className="text-sm">◉</span>
-                Initialize Camera
-              </span>
-            </button>
-          )}
-
           {cameraStatus === 'streaming' && (
             <>
               <button onClick={handleCaptureFrame}

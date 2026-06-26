@@ -138,7 +138,13 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
       setVoiceState('idle')
 
       if (data.tool === 'openCamera') {
-        router.push('/camera?auto=true')
+        const q = encodeURIComponent(text)
+        router.push(`/camera?auto=true&q=${q}`)
+        return
+      } else if (/open camera|check camera|what.*in front|look.*camera|see.*camera/i.test(text) && data.tool === undefined) {
+        const q = encodeURIComponent(text)
+        router.push(`/camera?auto=true&q=${q}`)
+        return
       }
     } catch {
       const errMsg = 'Command failed. Please try again.'
@@ -303,8 +309,10 @@ export default function VoiceAssistant() {
       setVoiceState('idle')
       setDisplayedResponse(responseText)
 
-      if (data.tool === 'openCamera') {
-        router.push('/camera?auto=true')
+      const isCameraCmd = /open camera|check camera|what.*in front|look.*camera|see.*camera/i.test(command)
+      if (data.tool === 'openCamera' || (isCameraCmd && data.tool === undefined)) {
+        const q = encodeURIComponent(command)
+        router.push(`/camera?auto=true&q=${q}`)
       }
 
       if (voiceEnabledRef.current && responseText) {
@@ -343,7 +351,14 @@ export default function VoiceAssistant() {
       const { text } = await res.json()
       if (text?.trim()) {
         setTranscript(text.trim())
-        sendCommand(text.trim())
+        const t = text.trim()
+        if (/open camera|check camera|what.*in front|what.*infront|look.*camera|see.*camera|in front of/i.test(t)) {
+          setVoiceState('idle')
+          const q = encodeURIComponent(t)
+          router.push(`/camera?auto=true&q=${q}`)
+          return
+        }
+        sendCommand(t)
       } else {
         if (voiceEnabledRef.current) startListening()
       }
