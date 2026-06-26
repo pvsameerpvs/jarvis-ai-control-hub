@@ -308,11 +308,9 @@ export default function VoiceAssistant() {
       }
 
       if (voiceEnabledRef.current && responseText) {
-        if (data.action === 'tool_execution') {
-          setTimeout(() => speakResponse(responseText), 1000)
-        } else {
-          speakResponse(responseText)
-        }
+        speakResponse(responseText)
+      } else if (voiceEnabledRef.current) {
+        startListeningRef.current?.()
       }
     } catch {
       setVoiceState('error')
@@ -385,7 +383,6 @@ export default function VoiceAssistant() {
           if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
             mediaRecorderRef.current.stop()
           }
-          return
         }
       }
     }

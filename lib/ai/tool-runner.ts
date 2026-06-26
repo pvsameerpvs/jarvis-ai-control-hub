@@ -98,8 +98,7 @@ export async function executeTool(
 function argsToParams(args: Record<string, unknown>): unknown[] {
   const keys = Object.keys(args)
   if (keys.length === 0) return []
-  if (keys.length === 1) return [args[keys[0]]]
-  return [args]
+  return keys.map(k => args[k])
 }
 
 const generalTools = {
