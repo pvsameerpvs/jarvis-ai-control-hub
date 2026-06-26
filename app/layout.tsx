@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
+import { JarvisProvider } from '@/components/jarvis/VoiceAssistant'
 import './globals.css'
 
 const inter = Inter({
@@ -15,11 +16,11 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'J.A.R.V.I.S AI Control Hub',
+  title: 'XENA AI Control Hub',
   description: 'Universal AI Desktop Assistant',
   keywords: ['AI', 'assistant', 'desktop', 'automation', 'voice'],
-  authors: [{ name: 'J.A.R.V.I.S' }],
-  applicationName: 'J.A.R.V.I.S AI Control Hub',
+  authors: [{ name: 'XENA' }],
+  applicationName: 'XENA AI Control Hub',
 }
 
 export const viewport: Viewport = {
@@ -34,10 +35,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <div className="scanline-overlay" />
-        {children}
+        <JarvisProvider>
+          {children}
+        </JarvisProvider>
       </body>
     </html>
   )

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import CameraPreview, { type CameraPreviewHandle } from '@/components/jarvis/CameraPreview'
 import BottomDock from '@/components/jarvis/BottomDock'
+import { useJarvis } from '@/components/jarvis/VoiceAssistant'
 
 function TimeDisplay() {
   const [time, setTime] = useState('')
@@ -41,23 +42,55 @@ function Waveform({ active, speaking }: { active: boolean; speaking: boolean }) 
   )
 }
 
+interface ChatMessage {
+  id: string
+  role: 'user' | 'jarvis'
+  text: string
+  time: string
+}
+
 export default function CameraPage() {
   const cameraRef = useRef<CameraPreviewHandle>(null)
+  const chatEndRef = useRef<HTMLDivElement>(null)
   const [question, setQuestion] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
-  const [aiResponse, setAiResponse] = useState('')
-  const [error, setError] = useState('')
   const [speaking, setSpeaking] = useState(false)
-  const [showResponse, setShowResponse] = useState(false)
   const [cameraStatus, setCameraStatus] = useState<'idle' | 'streaming' | 'captured' | 'error'>('idle')
+  const [liveMode, setLiveMode] = useState(false)
+  const [conversation, setConversation] = useState<ChatMessage[]>([])
+  const autoStartDoneRef = useRef(false)
   const waveformActive = cameraStatus === 'streaming' || cameraStatus === 'captured'
+
+  useEffect(() => {
+    if (autoStartDoneRef.current) return
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('auto') === 'true' && cameraStatus === 'idle') {
+        autoStartDoneRef.current = true
+        const timer = setTimeout(() => handleStartCamera(), 500)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [cameraStatus])
+
+  const addMessage = useCallback((role: 'user' | 'jarvis', text: string) => {
+    const msg: ChatMessage = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      role,
+      text,
+      time: new Date().toLocaleTimeString(),
+    }
+    setConversation(prev => [...prev.slice(-19), msg])
+  }, [])
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [conversation])
 
   const handleStatusChange = useCallback((status: 'idle' | 'streaming' | 'captured' | 'error') => {
     setCameraStatus(status)
     if (status === 'idle') {
-      setAiResponse('')
-      setError('')
-      setShowResponse(false)
+      setLiveMode(false)
     }
   }, [])
 
@@ -79,61 +112,124 @@ export default function CameraPage() {
 
   const handleReset = () => {
     cameraRef.current?.reset()
+    setConversation([])
   }
+
+  const sendForAnalysis = useCallback(async (imageBase64: string, userQuestion?: string): Promise<string> => {
+    const res = await fetch('/api/camera/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64,
+        ...(userQuestion ? { question: userQuestion } : {}),
+      }),
+    })
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null)
+      throw new Error(errData?.error || `API error: ${res.status}`)
+    }
+    const data = await res.json()
+    return data.response || data.message || ''
+  }, [])
 
   const handleAnalyze = async () => {
     if (!question.trim()) return
-    const img = cameraRef.current?.capturedImage
+
+    let img = cameraRef.current?.capturedImage
+    if (!img && cameraStatus === 'streaming') {
+      img = cameraRef.current?.getCurrentFrame() ?? null
+    }
     if (!img) return
 
+    const q = question.trim()
+    setQuestion('')
+    addMessage('user', q)
     setAnalyzing(true)
-    setError('')
-    setAiResponse('')
-    setShowResponse(true)
 
     try {
-      const res = await fetch('/api/camera/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: img, question: question.trim() }),
-      })
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null)
-        throw new Error(errData?.error || `API error: ${res.status}`)
-      }
-      const data = await res.json()
-      setAiResponse(data.response || data.message || JSON.stringify(data))
+      const text = await sendForAnalysis(img, q)
+      addMessage('jarvis', text)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to analyze image')
+      addMessage('jarvis', `Error: ${err instanceof Error ? err.message : 'Analysis failed'}`)
     } finally {
       setAnalyzing(false)
     }
   }
 
-  const handleSpeak = () => {
-    if (!aiResponse || typeof window === 'undefined') return
+  const handleSpeak = (text: string) => {
+    if (!text || typeof window === 'undefined') return
     const synth = window.speechSynthesis
     if (synth.speaking) {
       synth.cancel()
       setSpeaking(false)
       return
     }
-    const utterance = new SpeechSynthesisUtterance(aiResponse)
+    const utterance = new SpeechSynthesisUtterance(text)
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = () => setSpeaking(false)
     setSpeaking(true)
     synth.speak(utterance)
   }
 
+  // Live auto-analysis when streaming
+  useEffect(() => {
+    if (cameraStatus !== 'streaming') {
+      setLiveMode(false)
+      return
+    }
+
+    setLiveMode(true)
+    let active = true
+    let intervalId: ReturnType<typeof setInterval> | null = null
+
+    const tick = async () => {
+      if (!active) return
+      const img = cameraRef.current?.getCurrentFrame()
+      if (!img) return
+      try {
+        const text = await sendForAnalysis(img)
+        if (active) {
+          addMessage('jarvis', text)
+        }
+      } catch {
+        // silent retry next tick
+      }
+    }
+
+    const startTimeout = setTimeout(() => {
+      tick()
+      intervalId = setInterval(tick, 3000)
+    }, 1500)
+
+    return () => {
+      active = false
+      clearTimeout(startTimeout)
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [cameraStatus, sendForAnalysis, addMessage])
+
+  const { voiceEnabled } = useJarvis()
   const isActive = cameraStatus === 'streaming' || cameraStatus === 'captured'
-  const isCaptured = cameraStatus === 'captured'
+
+  if (!voiceEnabled) {
+    return (
+      <div className="h-screen bg-background overflow-hidden relative">
+        <div className="fixed inset-0 z-20 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="border border-[#FB7185]/20 rounded-lg p-6 bg-[#0a0e1a]/60 text-center">
+            <span className="text-3xl text-[#FB7185]/40 block mb-3">◈</span>
+            <p className="font-mono text-sm text-[#FB7185]/70 tracking-[0.15em] uppercase mb-1">System Powered Off</p>
+            <p className="font-mono text-[9px] text-[#FB7185]/30 tracking-[0.1em]">Return to Dashboard to enable</p>
+          </div>
+        </div>
+        <BottomDock />
+      </div>
+    )
+  }
 
   return (
     <div className="h-screen bg-background overflow-hidden relative">
-      {/* Camera background + scanner HUD */}
       <CameraPreview ref={cameraRef} onCapture={handleCapture} onStatusChange={handleStatusChange} />
 
-      {/* Scan lines overlay */}
       <div className="fixed inset-0 pointer-events-none z-[2] opacity-[0.008]
         bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(0,229,255,0.03)_2px,rgba(0,229,255,0.03)_4px)]" />
 
@@ -149,7 +245,7 @@ export default function CameraPage() {
               </h1>
             </div>
             <span className="text-[9px] font-mono text-primary-glow/30 tracking-[0.2em] uppercase border-l border-primary-glow/15 pl-4">
-              advanced analysis system
+              live video analysis
             </span>
           </div>
           <div className="flex items-center gap-4">
@@ -157,7 +253,7 @@ export default function CameraPage() {
               <span className={`w-1.5 h-1.5 rounded-full ${
                 isActive ? 'bg-primary-glow shadow-[0_0_6px_rgba(0,229,255,0.6)] animate-pulse' : 'bg-primary-glow/30'
               }`} />
-              {isActive ? 'neural link active' : 'standby'}
+              {isActive ? (liveMode ? 'watching' : 'online') : 'standby'}
             </span>
             <TimeDisplay />
           </div>
@@ -196,115 +292,146 @@ export default function CameraPage() {
               <span className="text-[9px] font-mono text-hud-text/60">{isActive ? '320' : '--'}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-mono text-hud-muted/40">IR MODE</span>
-              <span className="text-[9px] font-mono text-hud-text/60">OFF</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[9px] font-mono text-hud-muted/40">ZOOM</span>
-              <span className="text-[9px] font-mono text-hud-text/60">1.0×</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[9px] font-mono text-hud-muted/40">BUFFER</span>
-              <span className="text-[9px] font-mono text-hud-text/60">{isCaptured ? 'LOCKED' : isActive ? 'STREAM' : '--'}</span>
+              <span className="text-[9px] font-mono text-hud-muted/40">MODE</span>
+              <span className={`text-[9px] font-mono ${liveMode ? 'text-primary-glow' : 'text-hud-text/60'}`}>
+                {liveMode ? 'LIVE CONVERSATION' : isActive ? 'MANUAL' : '--'}
+              </span>
             </div>
           </div>
           <div className="mt-3 pt-3 border-t border-primary-glow/10">
             <div className="flex items-center gap-2">
               <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-hud-success shadow-[0_0_6px_rgba(34,197,94,0.5)]' : 'bg-hud-muted/20'}`} />
               <span className="text-[8px] font-mono text-hud-muted/30 tracking-wider">
-                {isActive ? 'ALL SYSTEMS NOMINAL' : 'AWAITING ACTIVATION'}
+                {liveMode ? 'XENA is watching' : isActive ? 'awaiting input' : 'AWAITING ACTIVATION'}
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* === RIGHT AI ANALYSIS PANEL === */}
-      <div className="absolute top-16 right-4 z-20 w-[260px]">
-        <div className="rounded-xl border border-primary-glow/15 bg-[#0a0e1a]/40 backdrop-blur-sm p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-px h-3 bg-primary-glow/40" />
-            <span className="text-[9px] font-mono text-primary-glow/50 tracking-[0.15em] uppercase">AI Vision Analysis</span>
+      {/* === RIGHT CHAT PANEL — live video call feel === */}
+      <div className="absolute top-16 right-4 z-20 w-[280px] bottom-24 flex flex-col">
+        <div className="flex-1 rounded-xl border border-primary-glow/15 bg-[#0a0e1a]/40 backdrop-blur-sm flex flex-col min-h-0">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-glow/10 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-px h-3 bg-primary-glow/40" />
+              <span className="text-[9px] font-mono text-primary-glow/50 tracking-[0.15em] uppercase">XENA</span>
+            </div>
+            {liveMode && (
+              <span className="flex items-center gap-1.5 text-[8px] font-mono text-primary-glow/60 tracking-wider uppercase">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary-glow shadow-[0_0_6px_rgba(0,229,255,0.6)] animate-pulse" />
+                Watching
+              </span>
+            )}
           </div>
 
-          <div className="space-y-3">
-            {/* Question input */}
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 min-h-0">
+            {conversation.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                {isActive ? (
+                  <>
+                    <div className="w-10 h-10 rounded-full border border-primary-glow/20 flex items-center justify-center mb-3">
+                      <span className="text-lg text-primary-glow/30">◉</span>
+                    </div>
+                    <p className="text-[10px] font-mono text-hud-muted/20 leading-relaxed max-w-[200px]">
+                      {liveMode
+                        ? 'XENA is watching the live feed. Descriptions will appear here automatically.'
+                        : 'Camera is live. Ask a question to start the conversation.'}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-[10px] font-mono text-hud-muted/20">Start the camera to begin.</p>
+                )}
+              </div>
+            )}
+
+            {conversation.map((msg) => (
+              <div key={msg.id} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                {/* Avatar */}
+                <div className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center ${
+                  msg.role === 'jarvis'
+                    ? 'bg-primary-glow/10 border border-primary-glow/25'
+                    : 'bg-[#020617]/60 border border-hud-muted/20'
+                }`}>
+                  <span className="text-[8px]">{msg.role === 'jarvis' ? 'J' : 'U'}</span>
+                </div>
+                {/* Bubble */}
+                <div className={`max-w-[85%] rounded-lg px-2.5 py-1.5 ${
+                  msg.role === 'jarvis'
+                    ? 'bg-primary-glow/[0.06] border border-primary-glow/15'
+                    : 'bg-[#020617]/60 border border-hud-muted/15'
+                }`}>
+                  <p className="text-[10px] font-mono text-hud-text/80 leading-relaxed whitespace-pre-wrap break-words">
+                    {msg.text}
+                  </p>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-[7px] font-mono text-hud-muted/20">{msg.time}</span>
+                    {msg.role === 'jarvis' && msg.text.length > 10 && (
+                      <button
+                        onClick={() => handleSpeak(msg.text)}
+                        className="text-[7px] font-mono text-primary-glow/30 hover:text-primary-glow/60 transition-colors"
+                      >
+                        ♪
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Analyzing indicator */}
+            {analyzing && (
+              <div className="flex gap-2">
+                <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center bg-primary-glow/10 border border-primary-glow/25">
+                  <span className="text-[8px]">J</span>
+                </div>
+                <div className="max-w-[85%] rounded-lg px-2.5 py-2 bg-primary-glow/[0.04] border border-primary-glow/10">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary-glow/50 animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary-glow/30 animate-pulse animate-delay-200" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary-glow/20 animate-pulse animate-delay-400" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Input */}
+          <div className="shrink-0 border-t border-primary-glow/10 p-2">
             <div className="flex gap-2">
               <input
                 type="text"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
-                placeholder={isCaptured ? 'Ask about this image...' : 'Capture a frame first...'}
-                className="flex-1 rounded-lg border border-primary-glow/20 bg-[#020617]/60 px-3 py-2 text-[10px] font-mono text-hud-text/80 placeholder:text-hud-muted/15 outline-none focus:border-primary-glow/40 focus:shadow-[0_0_10px_rgba(0,229,255,0.08)] transition-all"
+                placeholder={isActive ? 'Ask about what XENA sees...' : 'Start camera first...'}
+                className="flex-1 rounded-lg border border-primary-glow/20 bg-[#020617]/60 px-2.5 py-1.5 text-[10px] font-mono text-hud-text/80 placeholder:text-hud-muted/15 outline-none focus:border-primary-glow/40 focus:shadow-[0_0_10px_rgba(0,229,255,0.08)] transition-all"
               />
               <button
                 onClick={handleAnalyze}
-                disabled={!question.trim() || analyzing || !isCaptured}
-                className="px-3 py-2 rounded-lg bg-primary-glow/10 border border-primary-glow/25 text-[9px] font-mono text-primary-glow/80 tracking-wider uppercase
+                disabled={!question.trim() || analyzing || !isActive}
+                className="px-3 py-1.5 rounded-lg bg-primary-glow/10 border border-primary-glow/25 text-[9px] font-mono text-primary-glow/80 tracking-wider uppercase
                   hover:bg-primary-glow/20 hover:border-primary-glow/40
                   disabled:opacity-25 disabled:cursor-not-allowed
-                  transition-all duration-300"
+                  transition-all duration-300 shrink-0"
               >
                 {analyzing ? (
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full border border-primary-glow/60 border-t-transparent animate-spin" />
-                    Scan
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full border border-primary-glow/60 border-t-transparent animate-spin" />
                   </span>
                 ) : 'Ask'}
               </button>
             </div>
-
-            {/* Response */}
-            {showResponse && (aiResponse || error) && (
-              <div className={`p-3 rounded-lg border ${
-                error
-                  ? 'bg-hud-error/5 border-hud-error/20'
-                  : 'bg-primary-glow/[0.04] border-primary-glow/15'
-              }`}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`w-1 h-1 rounded-full ${error ? 'bg-hud-error' : 'bg-primary-glow'} shadow-[0_0_4px_rgba(0,229,255,0.4)]`} />
-                    <span className="text-[8px] font-mono text-hud-muted/40 tracking-[0.1em] uppercase">
-                      {error ? 'Error' : 'J.A.R.V.I.S'}
-                    </span>
-                  </div>
-                  {aiResponse && !error && (
-                    <button
-                      onClick={handleSpeak}
-                      className="text-[8px] font-mono text-primary-glow/40 hover:text-primary-glow/70 tracking-wider transition-colors"
-                    >
-                      {speaking ? '■ STOP' : '♪ SPEAK'}
-                    </button>
-                  )}
-                </div>
-                <div className="max-h-[180px] overflow-y-auto">
-                  <p className={`text-[10px] font-mono leading-relaxed ${
-                    error ? 'text-hud-error/70' : 'text-hud-text/70'
-                  }`}>
-                    {error || aiResponse}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Status hint */}
-            {!showResponse && (
-              <p className="text-[9px] font-mono text-hud-muted/20 text-center leading-relaxed">
-                {isCaptured
-                  ? 'Frame locked. Ask J.A.R.V.I.S to analyze.'
-                  : isActive
-                    ? 'Capture a frame to begin analysis.'
-                    : 'Initialize the camera to start.'}
-              </p>
-            )}
           </div>
         </div>
       </div>
 
       {/* === BOTTOM CONTROLS + WAVEFORM === */}
       <div className="absolute bottom-16 left-0 right-0 z-20 flex flex-col items-center gap-3 px-4">
-        {/* Waveform */}
         <div className="flex items-center gap-4 px-6 py-2 rounded-xl border border-primary-glow/10 bg-[#0a0e1a]/30 backdrop-blur-sm">
           <span className="text-[8px] font-mono text-primary-glow/30 tracking-[0.15em] uppercase">Freq</span>
           <Waveform active={waveformActive} speaking={speaking} />
@@ -313,7 +440,6 @@ export default function CameraPage() {
           </span>
         </div>
 
-        {/* Controls */}
         <div className="flex items-center gap-4">
           {cameraStatus === 'idle' && (
             <button onClick={handleStartCamera}
@@ -375,7 +501,6 @@ export default function CameraPage() {
         </div>
       </div>
 
-      {/* === BOTTOM DOCK === */}
       <BottomDock />
     </div>
   )

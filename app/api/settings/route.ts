@@ -15,6 +15,35 @@ export async function GET() {
   }
 }
 
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const keys = Object.keys(body)
+    if (keys.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'At least one setting key-value pair is required' },
+        { status: 400 }
+      )
+    }
+    for (const [key, value] of Object.entries(body)) {
+      setConfig(key, String(value))
+    }
+    invalidateConfigCache()
+    const settings = getAllConfig()
+    return NextResponse.json({
+      success: true,
+      settings,
+      message: `${keys.length} setting(s) updated successfully`,
+    })
+  } catch (error) {
+    logger.error('system', 'Settings POST API error', { error: String(error) })
+    return NextResponse.json(
+      { success: false, error: 'Failed to update settings' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()

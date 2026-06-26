@@ -6,7 +6,7 @@ import { logger } from '@/lib/utils/logger'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { command } = body
+    const { command, language } = body
 
     if (!command || typeof command !== 'string') {
       return NextResponse.json(
@@ -15,13 +15,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await processCommand(command)
+    const result = await processCommand(command, language || 'en-US')
 
     try {
       const db = getDatabase()
       db.prepare(
         'INSERT INTO command_logs (type, message, metadata) VALUES (?, ?, ?)'
-      ).run('api', command, JSON.stringify({ source: 'api/agent', result: result.success }))
+      ).run('api', command, JSON.stringify({ source: 'api/agent', result: result.success, language }))
     } catch (dbError) {
       logger.error('system', 'Failed to log command to database', { error: String(dbError) })
     }

@@ -2,6 +2,7 @@
 
 import { type ReactNode } from 'react'
 import BottomDock from './BottomDock'
+import { useJarvis } from './VoiceAssistant'
 
 interface HudPageLayoutProps {
   children: ReactNode
@@ -43,6 +44,8 @@ export default function HudPageLayout({
   badge,
   headerRight,
 }: HudPageLayoutProps) {
+  const { voiceEnabled } = useJarvis()
+
   return (
     <div className="min-h-screen bg-background bg-grid-pattern">
       <PageGlow />
@@ -74,7 +77,12 @@ export default function HudPageLayout({
               )}
               {badge}
             </div>
-            {headerRight}
+            <div className="flex items-center gap-3">
+              <span className={`font-mono text-[8px] tracking-[0.15em] uppercase ${voiceEnabled ? 'text-primary-glow/50' : 'text-[#FB7185]/60'}`}>
+                {voiceEnabled ? 'POWER:ON' : 'POWER:OFF'}
+              </span>
+              {headerRight}
+            </div>
           </div>
           <div className="h-px bg-gradient-to-r from-transparent via-primary-glow/15 to-transparent" />
         </header>
@@ -84,8 +92,18 @@ export default function HudPageLayout({
         <CornerBracket position="tr" />
 
         {/* Content */}
-        <main className="flex-1 px-4 py-6 max-w-4xl mx-auto w-full space-y-6">
-          {children}
+        <main className="flex-1 px-4 py-6 max-w-4xl mx-auto w-full space-y-6 relative">
+          {voiceEnabled ? (
+            children
+          ) : (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+              <div className="border border-[#FB7185]/20 rounded-lg p-6 bg-[#0a0e1a]/60 text-center">
+                <span className="text-3xl text-[#FB7185]/40 block mb-3">◈</span>
+                <p className="font-mono text-sm text-[#FB7185]/70 tracking-[0.15em] uppercase mb-1">System Powered Off</p>
+                <p className="font-mono text-[9px] text-[#FB7185]/30 tracking-[0.1em]">Return to Dashboard to enable</p>
+              </div>
+            </div>
+          )}
         </main>
       </div>
 

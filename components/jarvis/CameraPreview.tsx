@@ -7,6 +7,7 @@ type CameraStatus = 'idle' | 'streaming' | 'captured' | 'error'
 export interface CameraPreviewHandle {
   startCamera: () => Promise<void>
   captureFrame: () => void
+  getCurrentFrame: () => string | null
   retake: () => void
   reset: () => void
   status: CameraStatus
@@ -49,7 +50,6 @@ const CameraPreview = forwardRef<CameraPreviewHandle, CameraPreviewProps>(
           video: {
             width: { ideal: 640 },
             height: { ideal: 480 },
-            facingMode: 'user',
           },
         })
 
@@ -75,24 +75,27 @@ const CameraPreview = forwardRef<CameraPreviewHandle, CameraPreviewProps>(
       }
     }, [onClear, onStatusChange])
 
-    const captureFrame = useCallback(() => {
+    const getCurrentFrame = useCallback(() => {
       const video = videoRef.current
       const canvas = canvasRef.current
-      if (!video || !canvas) return
-
+      if (!video || !canvas) return null
       canvas.width = video.videoWidth
       canvas.height = video.videoHeight
       const ctx = canvas.getContext('2d')
-      if (!ctx) return
-
+      if (!ctx) return null
       ctx.drawImage(video, 0, 0)
-      const base64 = canvas.toDataURL('image/jpeg', 0.85)
+      return canvas.toDataURL('image/jpeg', 0.85)
+    }, [])
+
+    const captureFrame = useCallback(() => {
+      const base64 = getCurrentFrame()
+      if (!base64) return
       setCapturedImage(base64)
       setStatus('captured')
       onStatusChange?.('captured')
       onCapture?.(base64)
       stopStream()
-    }, [stopStream, onCapture, onStatusChange])
+    }, [stopStream, onCapture, onStatusChange, getCurrentFrame])
 
     const retake = useCallback(() => {
       setCapturedImage(null)
@@ -114,11 +117,12 @@ const CameraPreview = forwardRef<CameraPreviewHandle, CameraPreviewProps>(
     useImperativeHandle(ref, () => ({
       startCamera,
       captureFrame,
+      getCurrentFrame,
       retake,
       reset,
       status,
       capturedImage,
-    }), [startCamera, captureFrame, retake, reset, status, capturedImage])
+    }), [startCamera, captureFrame, getCurrentFrame, retake, reset, status, capturedImage])
 
     useEffect(() => {
       return () => { stopStream() }

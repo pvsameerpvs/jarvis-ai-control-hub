@@ -17,6 +17,7 @@ interface Settings {
   db_path?: string
   voice_rate?: number
   voice_pitch?: number
+  language?: string
 }
 
 export default function SettingsPage() {
@@ -35,6 +36,7 @@ export default function SettingsPage() {
   const [vscodeCommand, setVscodeCommand] = useState('')
   const [voiceRate, setVoiceRate] = useState(1)
   const [voicePitch, setVoicePitch] = useState(1)
+  const [language, setLang] = useState('en-US')
 
   useEffect(() => {
     fetchSettings()
@@ -57,6 +59,7 @@ export default function SettingsPage() {
       setVscodeCommand(s.vscode_command || '')
       setVoiceRate(s.voice_rate ?? 1)
       setVoicePitch(s.voice_pitch ?? 1)
+      setLang(s.language || 'en-US')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load settings')
     } finally {
@@ -228,6 +231,39 @@ export default function SettingsPage() {
           <p className="text-xs font-mono text-hud-text/70 bg-deep-blue/40 border border-panel-border/30 rounded-lg px-4 py-2.5">
             {settings.db_path || '/path/to/jarvis.db'}
           </p>
+        </div>
+      </GlassCard>
+
+      <GlassCard title="Language">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">Assistant Language</label>
+            <div className="flex gap-2">
+              <select
+                value={language}
+                onChange={(e) => setLang(e.target.value)}
+                className="flex-1 rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all appearance-none cursor-pointer"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2300E5FF' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                  backgroundPosition: 'right 12px center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '20px',
+                }}
+              >
+                <option value="en-US" className="bg-[#0a0e1a]">English (English)</option>
+                <option value="ml-IN" className="bg-[#0a0e1a]">Malayalam (മലയാളം)</option>
+              </select>
+              <Button onClick={() => {
+                saveSettings('Language', { language })
+                setLang(language)
+              }} loading={saving === 'Language'} disabled={language === (settings.language || 'en-US')}>
+                Save
+              </Button>
+            </div>
+            <p className="text-[10px] font-mono text-hud-muted/30 mt-1.5 tracking-wider">
+              Xena will speak and respond in the selected language
+            </p>
+          </div>
         </div>
       </GlassCard>
 

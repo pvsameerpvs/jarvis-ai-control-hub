@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import JarvisOrb from '@/components/jarvis/JarvisOrb'
 import VoiceWaveform from '@/components/jarvis/VoiceWaveform'
-import { JarvisProvider, useJarvis } from '@/components/jarvis/VoiceAssistant'
+import { useJarvis } from '@/components/jarvis/VoiceAssistant'
 import VoiceAssistant from '@/components/jarvis/VoiceAssistant'
 import ChatPanel from '@/components/jarvis/ChatPanel'
 import SystemStatus from '@/components/jarvis/SystemStatus'
@@ -178,9 +178,5 @@ function DashboardContent() {
 }
 
 export default function DashboardPage() {
-  return (
-    <JarvisProvider>
-      <DashboardContent />
-    </JarvisProvider>
-  )
+  return <DashboardContent />
 }

@@ -3,6 +3,13 @@ import { analyzeImage } from '@/lib/ai/gemini-client'
 import { getDatabase } from '@/lib/db/connection'
 import { logger } from '@/lib/utils/logger'
 
+const SYSTEM_INSTRUCTION = `You are XENA, an advanced AI vision system. When given an image, describe what you see naturally and conversationally as if you're a human observer. Be specific about objects, colors, text, people, and the environment. If asked a question, answer it directly and helpfully. Keep responses concise but descriptive. Never say "I can't see" or "I'm an AI" — just describe what's in the image naturally.`
+
+function stripBase64Prefix(data: string): string {
+  const comma = data.indexOf(',')
+  return comma !== -1 ? data.slice(comma + 1) : data
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -15,10 +22,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const prompt = question || 'Analyze this image and describe what you see in detail.'
+    const rawBase64 = stripBase64Prefix(imageBase64)
+    const prompt = question || 'Look at this image and describe everything you see in detail.'
 
     const startTime = Date.now()
-    const response = await analyzeImage(imageBase64, prompt)
+    const response = await analyzeImage(rawBase64, prompt, SYSTEM_INSTRUCTION)
     const durationMs = Date.now() - startTime
 
     try {
@@ -34,7 +42,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       response,
-      data: { durationMs, imageSize: imageBase64.length },
+      data: { durationMs, imageSize: rawBase64.length },
     })
   } catch (error) {
     const errorMessage = String(error)

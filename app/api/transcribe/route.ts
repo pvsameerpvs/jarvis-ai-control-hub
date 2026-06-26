@@ -6,6 +6,7 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
     const audioFile = formData.get('audio') as Blob | null
+    const language = (formData.get('language') as string) || 'en-US'
 
     if (!audioFile) {
       return NextResponse.json({ error: 'No audio file provided' }, { status: 400 })
@@ -15,9 +16,9 @@ export async function POST(req: NextRequest) {
     const base64 = buffer.toString('base64')
     const mimeType = audioFile.type || 'audio/webm'
 
-    const text = await transcribeAudio(base64, mimeType)
+    const text = await transcribeAudio(base64, mimeType, language)
 
-    logger.info('system', 'Transcription completed', { text: text.slice(0, 100) })
+    logger.info('system', 'Transcription completed', { text: text.slice(0, 100), language })
 
     return NextResponse.json({ text })
   } catch (error) {

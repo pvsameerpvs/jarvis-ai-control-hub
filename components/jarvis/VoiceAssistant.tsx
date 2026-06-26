@@ -9,6 +9,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react'
+import { useRouter } from 'next/navigation'
 
 type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking' | 'executing' | 'error'
 
@@ -31,6 +32,9 @@ interface JarvisContextValue {
   stopTyping: () => void
   audioLevel: number
   setAudioLevel: (level: number) => void
+  voiceEnabled: boolean
+  setVoiceEnabled: (enabled: boolean) => void
+  language: string
 }
 
 const JarvisContext = createContext<JarvisContextValue | undefined>(undefined)
@@ -44,6 +48,7 @@ export function useJarvis(): JarvisContextValue {
 }
 
 export function JarvisProvider({ children }: { children: ReactNode }) {
+  const router = useRouter()
   const [voiceState, setVoiceState] = useState<VoiceState>('idle')
   const [lastResponse, setLastResponse] = useState('')
   const [displayedResponse, setDisplayedResponse] = useState('')
@@ -55,6 +60,15 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
   const [smoothLevel, setSmoothLevel] = useState(0)
   const rafSmoothRef = useRef<number | null>(null)
   const smoothLevelRef = useRef(0)
+  const [voiceEnabled, setVoiceEnabled] = useState(false)
+  const [language, setLanguage] = useState('en-US')
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(d => { if (d.settings?.language) setLanguage(d.settings.language) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const smooth = () => {
@@ -115,20 +129,24 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
       const res = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: text, transcript: text, timestamp: new Date().toISOString() }),
+        body: JSON.stringify({ command: text, transcript: text, language: language || 'en-US', timestamp: new Date().toISOString() }),
       })
       const data = await res.json()
       const responseText = data.response || data.message || JSON.stringify(data)
       setLastResponse(responseText)
       startTypingEffect(responseText)
       setVoiceState('idle')
+
+      if (data.tool === 'openCamera') {
+        router.push('/camera?auto=true')
+      }
     } catch {
       const errMsg = 'Command failed. Please try again.'
       setLastResponse(errMsg)
       setDisplayedResponse(errMsg)
       setVoiceState('error')
     }
-  }, [addToHistory, stopTyping, startTypingEffect])
+  }, [addToHistory, stopTyping, startTypingEffect, language, router])
 
   return (
     <JarvisContext.Provider
@@ -149,6 +167,9 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
         stopTyping,
         audioLevel: smoothLevel,
         setAudioLevel: setRawLevel,
+        voiceEnabled,
+        setVoiceEnabled,
+        language,
       }}
     >
       {children}
@@ -179,12 +200,13 @@ const SILENCE_MS = 1200
 const SPEECH_THRESHOLD = 0.02
 
 export default function VoiceAssistant() {
-  const { voiceState, setVoiceState, lastResponse, setLastResponse, addToHistory, startTypingEffect, stopTyping, setDisplayedResponse, audioLevel, setAudioLevel } = useJarvis()
+  const { voiceState, setVoiceState, voiceEnabled, setVoiceEnabled, lastResponse, setLastResponse, addToHistory, startTypingEffect, stopTyping, setDisplayedResponse, audioLevel, setAudioLevel } = useJarvis()
+  const router = useRouter()
 
   const [transcript, setTranscript] = useState('')
   const [micSupported, setMicSupported] = useState(true)
-  const [voiceEnabled, setVoiceEnabled] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [language, setLanguage] = useState('en-US')
 
   const streamRef = useRef<MediaStream | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -199,6 +221,7 @@ export default function VoiceAssistant() {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
   const isProcessingRef = useRef(false)
   const startListeningRef = useRef<() => void>(() => {})
+  const languageRef = useRef('en-US')
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -206,8 +229,18 @@ export default function VoiceAssistant() {
       if (!navigator.mediaDevices?.getUserMedia) {
         setMicSupported(false)
       }
+      fetch('/api/settings')
+        .then(r => r.json())
+        .then(d => {
+          const lang = d.settings?.language || 'en-US'
+          setLanguage(lang)
+          languageRef.current = lang
+        })
+        .catch(() => {})
     }
   }, [])
+
+  useEffect(() => { languageRef.current = language }, [language])
 
   const stopMic = useCallback(() => {
     if (audioContextRef.current) {
@@ -228,7 +261,7 @@ export default function VoiceAssistant() {
     if (!synthesisRef.current) return
     if (!voiceEnabledRef.current) return
     const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'en-US'
+    utterance.lang = languageRef.current || 'en-US'
     utterance.rate = 1.0
     utterance.pitch = 0.9
     utterance.onstart = () => setVoiceState('speaking')
@@ -254,7 +287,12 @@ export default function VoiceAssistant() {
       const response = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command, transcript: command, timestamp: new Date().toISOString() }),
+        body: JSON.stringify({
+          command,
+          transcript: command,
+          language: languageRef.current || 'en-US',
+          timestamp: new Date().toISOString(),
+        }),
       })
 
       if (!response.ok) throw new Error(`API error: ${response.status}`)
@@ -264,6 +302,10 @@ export default function VoiceAssistant() {
       setLastResponse(responseText)
       setVoiceState('idle')
       setDisplayedResponse(responseText)
+
+      if (data.tool === 'openCamera') {
+        router.push('/camera?auto=true')
+      }
 
       if (voiceEnabledRef.current && responseText) {
         if (data.action === 'tool_execution') {
@@ -282,7 +324,7 @@ export default function VoiceAssistant() {
       }, 2000)
     }
     isProcessingRef.current = false
-  }, [addToHistory, speakResponse, stopTyping])
+  }, [addToHistory, speakResponse, stopTyping, router])
 
   const transcribeAndSend = useCallback(async () => {
     if (recordedChunksRef.current.length === 0) return
@@ -292,6 +334,7 @@ export default function VoiceAssistant() {
 
     const formData = new FormData()
     formData.append('audio', audioBlob, 'recording.webm')
+    formData.append('language', languageRef.current || 'en-US')
 
     try {
       const res = await fetch('/api/transcribe', { method: 'POST', body: formData })
@@ -366,6 +409,7 @@ export default function VoiceAssistant() {
       streamRef.current = stream
 
       const audioCtx = new AudioContext()
+      if (audioCtx.state === 'suspended') await audioCtx.resume()
       audioContextRef.current = audioCtx
       const source = audioCtx.createMediaStreamSource(stream)
       const analyser = audioCtx.createAnalyser()
@@ -390,6 +434,8 @@ export default function VoiceAssistant() {
       checkAudioLevel()
     } catch {
       setMicSupported(false)
+      setVoiceEnabled(false)
+      voiceEnabledRef.current = false
       setVoiceState('idle')
     }
   }, [checkAudioLevel, transcribeAndSend, stopMic])

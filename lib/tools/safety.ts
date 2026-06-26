@@ -39,19 +39,7 @@ const DANGEROUS_COMMANDS = [
   /\/dev\/null/,
 ]
 
-const CONFIRMATION_REQUIRED_TOOLS = [
-  'sendTelegramMessage',
-  'sendTodayReportToTelegram',
-  'openGoogleSearch',
-  'openYouTubeSearch',
-  'openWebsite',
-  'openVSCode',
-  'openProjectFolder',
-  'openTerminal',
-  'startLocalServer',
-  'openErpPage',
-  'openCamera',
-]
+const CONFIRMATION_REQUIRED_TOOLS: string[] = []
 
 const FILE_DELETE_TOOLS: string[] = []
 

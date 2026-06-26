@@ -1,7 +1,7 @@
 import { analyzeImage } from '@/lib/ai/gemini-client'
 import { logger } from '@/lib/utils/logger'
 
-const CAMERA_SYSTEM_PROMPT = `You are J.A.R.V.I.S vision system. Analyze the image carefully and provide detailed information.
+const CAMERA_SYSTEM_PROMPT = `You are XENA vision system. Analyze the image carefully and provide detailed information.
 For object explanation: Identify all visible objects, their likely purpose, and any notable characteristics.
 For document reading: Extract all text content accurately, maintaining formatting where possible.`
 

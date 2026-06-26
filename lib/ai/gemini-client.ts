@@ -173,16 +173,21 @@ export async function chatWithHistory(
 
 export async function transcribeAudio(
   audioBase64: string,
-  mimeType: string = 'audio/webm'
+  mimeType: string = 'audio/webm',
+  language: string = 'en-US'
 ): Promise<string> {
   const client = getClient()
   const startTime = Date.now()
+
+  const langPrompt = language === 'ml-IN'
+    ? 'Transcribe the speech in this audio accurately. It may be in Malayalam (മലയാളം) or English. Return only the transcribed text in the original language, nothing else.'
+    : 'Transcribe the speech in this audio accurately. Return only the transcribed text, nothing else.'
 
   try {
     const response = await client.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [
-        { text: 'Transcribe the speech in this audio accurately. Return only the transcribed text, nothing else.' },
+        { text: langPrompt },
         {
           inlineData: {
             mimeType,
@@ -198,6 +203,7 @@ export async function transcribeAudio(
     logger.ai('Audio transcribed', {
       durationMs: duration,
       responseLength: result.length,
+      language,
     })
 
     return result

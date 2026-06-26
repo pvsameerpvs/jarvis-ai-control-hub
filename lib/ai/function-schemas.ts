@@ -37,7 +37,7 @@ export const generalTools: FunctionSchema[] = [
 export const cameraTools: FunctionSchema[] = [
   {
     name: 'openCamera',
-    description: 'Open the camera for capturing images or video',
+    description: 'Open the camera to see what is in front. Use this whenever the user asks to check, open, or look through the camera. This activates the visual feed so you can see.',
     parameters: {
       type: 'OBJECT',
       description: 'No parameters needed',
@@ -55,7 +55,7 @@ export const cameraTools: FunctionSchema[] = [
   },
   {
     name: 'analyzeCameraImage',
-    description: 'Analyze an image from the camera with a specific question',
+    description: 'Analyze a camera image with a specific question. Use this when the user asks what something is or wants details about what is visible.',
     parameters: {
       type: 'OBJECT',
       description: 'Parameters for image analysis',
@@ -74,7 +74,7 @@ export const cameraTools: FunctionSchema[] = [
   },
   {
     name: 'explainVisibleObject',
-    description: 'Identify and explain objects visible in the camera image',
+    description: 'Describe everything visible in the camera image. Use this when the user asks "what do you see" or "explain what is there" — it identifies and explains all objects.',
     parameters: {
       type: 'OBJECT',
       description: 'Parameters for object explanation',
