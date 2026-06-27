@@ -37,10 +37,41 @@ export default function SettingsPage() {
   const [voiceRate, setVoiceRate] = useState(1)
   const [voicePitch, setVoicePitch] = useState(1)
   const [language, setLang] = useState('en-US')
+  const [gmailConnected, setGmailConnected] = useState(false)
+  const [gmailChecking, setGmailChecking] = useState(false)
 
   useEffect(() => {
     fetchSettings()
   }, [])
+
+  const connectGmail = async () => {
+    try {
+      const res = await fetch('/api/gmail/auth')
+      const data = await res.json()
+      if (data.authUrl) {
+        window.location.href = data.authUrl
+      } else if (data.loggedIn) {
+        setGmailConnected(true)
+      }
+    } catch {
+      setError('Failed to connect Gmail')
+    }
+  }
+
+  const disconnectGmail = async () => {
+    try {
+      await fetch('/api/gmail/disconnect', { method: 'POST' })
+      setGmailConnected(false)
+      setSuccess('Gmail disconnected')
+    } catch {
+      setError('Failed to disconnect Gmail')
+    }
+  }
+
+  const GmailStatus = () => {
+    if (gmailChecking) return <span className="text-xs font-mono text-hud-muted animate-pulse">Checking...</span>
+    return <StatusBadge status={gmailConnected ? 'connected' : 'disconnected'} label={gmailConnected ? 'Connected' : 'Not Connected'} />
+  }
 
   const fetchSettings = async () => {
     setLoading(true)
@@ -60,6 +91,7 @@ export default function SettingsPage() {
       setVoiceRate(s.voice_rate ?? 1)
       setVoicePitch(s.voice_pitch ?? 1)
       setLang(s.language || 'en-US')
+      setGmailConnected(s.gmail_logged_in === 'true')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load settings')
     } finally {
@@ -139,7 +171,7 @@ export default function SettingsPage() {
         </div>
       </GlassCard>
 
-      <GlassCard title="Gmail OAuth">
+      <GlassCard title="Gmail">
         <div className="space-y-3">
           <div>
             <label className="block text-xs font-mono text-hud-muted mb-1.5 tracking-wider uppercase">Client ID</label>
@@ -158,12 +190,27 @@ export default function SettingsPage() {
               value={gmailClientSecret}
               onChange={(e) => setGmailClientSecret(e.target.value)}
               placeholder="Google OAuth Client Secret"
-              className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px_rgba(0,229,255,0.15)] transition-all"
+              className="w-full rounded-lg border border-panel-border bg-deep-blue/60 px-4 py-2.5 text-sm font-mono text-hud-text placeholder:text-hud-muted/30 outline-none focus:border-primary-glow focus:shadow-[0_0_12px rgba(0,229,255,0.15)] transition-all"
             />
           </div>
-          <Button onClick={() => saveSettings('Gmail OAuth', { gmail_client_id: gmailClientId, gmail_client_secret: gmailClientSecret })} loading={saving === 'Gmail OAuth'}>
-            Save
+          <Button onClick={() => saveSettings('Gmail', { gmail_client_id: gmailClientId, gmail_client_secret: gmailClientSecret })} loading={saving === 'Gmail'}>
+            Save Credentials
           </Button>
+
+          <div className="border-t border-panel-border/30 pt-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono text-hud-muted">Gmail Connection</span>
+              <GmailStatus />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={connectGmail} variant="primary" size="sm">
+                Connect Gmail
+              </Button>
+              <Button onClick={disconnectGmail} variant="danger" size="sm">
+                Disconnect
+              </Button>
+            </div>
+          </div>
         </div>
       </GlassCard>
 

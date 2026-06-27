@@ -5,6 +5,7 @@ import * as googleSearchTools from '@/lib/tools/google-search-tools'
 import * as browserTools from '@/lib/tools/browser-tools'
 import * as erpTools from '@/lib/tools/erp-connector-tools'
 import * as systemTools from '@/lib/tools/system-tools'
+import * as mapsTools from '@/lib/tools/maps-tools'
 import { logger } from '@/lib/utils/logger'
 import { requiresConfirmation } from '@/lib/tools/safety'
 
@@ -53,6 +54,12 @@ export async function executeTool(
       openProjectFolder: systemTools as any,
       startLocalServer: systemTools as any,
       openTerminal: systemTools as any,
+      searchPlaces: mapsTools as any,
+      findNearbyPlaces: mapsTools as any,
+      getPlaceDetails: mapsTools as any,
+      getDirections: mapsTools as any,
+      geocodeAddress: mapsTools as any,
+      reverseGeocode: mapsTools as any,
     }
 
     const module = toolModules[toolName]

@@ -362,6 +362,124 @@ export const systemTools: FunctionSchema[] = [
   },
 ]
 
+export const mapsTools: FunctionSchema[] = [
+  {
+    name: 'searchPlaces',
+    description: 'Search for places, businesses, or locations using Google Maps. Use this when the user asks about a specific place, wants to find a business, or asks "where is" something.',
+    parameters: {
+      type: 'OBJECT',
+      description: 'Parameters for place search',
+      properties: {
+        query: {
+          type: 'STRING',
+          description: 'The place or business to search for (e.g. "coffee shops near me", "Taj Mahal", "pizza restaurants in Brooklyn")',
+        },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'findNearbyPlaces',
+    description: 'Find places near a specific location by type (restaurant, cafe, hospital, etc.)',
+    parameters: {
+      type: 'OBJECT',
+      description: 'Parameters for nearby search',
+      properties: {
+        lat: {
+          type: 'NUMBER',
+          description: 'Latitude of the center point',
+        },
+        lng: {
+          type: 'NUMBER',
+          description: 'Longitude of the center point',
+        },
+        type: {
+          type: 'STRING',
+          description: 'Type of place (restaurant, cafe, hospital, park, school, etc.)',
+        },
+        radius: {
+          type: 'NUMBER',
+          description: 'Search radius in meters (default 1000)',
+        },
+      },
+      required: ['lat', 'lng'],
+    },
+  },
+  {
+    name: 'getPlaceDetails',
+    description: 'Get detailed information about a specific place using its place ID',
+    parameters: {
+      type: 'OBJECT',
+      description: 'Parameters for place details',
+      properties: {
+        placeId: {
+          type: 'STRING',
+          description: 'The Google Maps place ID',
+        },
+      },
+      required: ['placeId'],
+    },
+  },
+  {
+    name: 'getDirections',
+    description: 'Get driving, walking, bicycling, or transit directions between two locations',
+    parameters: {
+      type: 'OBJECT',
+      description: 'Parameters for directions',
+      properties: {
+        origin: {
+          type: 'STRING',
+          description: 'Starting location (address or place name)',
+        },
+        destination: {
+          type: 'STRING',
+          description: 'Destination location (address or place name)',
+        },
+        mode: {
+          type: 'STRING',
+          description: 'Travel mode: driving, walking, bicycling, or transit (default driving)',
+          enum: ['driving', 'walking', 'bicycling', 'transit'],
+        },
+      },
+      required: ['origin', 'destination'],
+    },
+  },
+  {
+    name: 'geocodeAddress',
+    description: 'Convert an address into geographic coordinates (latitude/longitude)',
+    parameters: {
+      type: 'OBJECT',
+      description: 'Parameters for geocoding',
+      properties: {
+        address: {
+          type: 'STRING',
+          description: 'The address to geocode',
+        },
+      },
+      required: ['address'],
+    },
+  },
+  {
+    name: 'reverseGeocode',
+    description: 'Convert geographic coordinates into a human-readable address',
+    parameters: {
+      type: 'OBJECT',
+      description: 'Parameters for reverse geocoding',
+      properties: {
+        lat: {
+          type: 'NUMBER',
+          description: 'Latitude',
+        },
+        lng: {
+          type: 'NUMBER',
+          description: 'Longitude',
+        },
+      },
+      required: ['lat', 'lng'],
+    },
+  },
+]
+
 export const allFunctionSchemas: FunctionSchema[] = [
   ...generalTools,
   ...cameraTools,
@@ -370,6 +488,7 @@ export const allFunctionSchemas: FunctionSchema[] = [
   ...googleSearchTools,
   ...erpTools,
   ...systemTools,
+  ...mapsTools,
 ]
 
 export function buildToolsDeclaration(): { functionDeclarations: { name: string; description: string; parameters?: Record<string, unknown> }[] }[] {

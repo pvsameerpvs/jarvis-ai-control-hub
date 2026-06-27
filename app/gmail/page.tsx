@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import GlassCard from '@/components/shared/GlassCard'
 import Button from '@/components/shared/Button'
 import StatusBadge from '@/components/shared/StatusBadge'
@@ -17,6 +17,7 @@ interface Email {
 export default function GmailPage() {
   const [connected, setConnected] = useState(false)
   const [connecting, setConnecting] = useState(false)
+  const [checking, setChecking] = useState(true)
   const [todayCount, setTodayCount] = useState<number | null>(null)
   const [unreadCount, setUnreadCount] = useState<number | null>(null)
   const [emails, setEmails] = useState<Email[]>([])
@@ -27,15 +28,56 @@ export default function GmailPage() {
   const [loading, setLoading] = useState<'counts' | 'emails' | null>(null)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    checkGmailStatus()
+  }, [])
+
+  const checkGmailStatus = async () => {
+    setChecking(true)
+    try {
+      const res = await fetch('/api/gmail/auth')
+      if (res.ok) {
+        const data = await res.json()
+        setConnected(data.loggedIn === true)
+      }
+    } catch {
+      setConnected(false)
+    } finally {
+      setChecking(false)
+    }
+  }
+
   const handleConnect = async () => {
     setConnecting(true)
     setError('')
     try {
-      setConnected(true)
+      const res = await fetch('/api/gmail/auth')
+      const data = await res.json()
+      if (data.authUrl) {
+        window.location.href = data.authUrl
+      } else if (data.loggedIn) {
+        setConnected(true)
+      } else {
+        setError(data.error || 'Connection failed')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connection failed')
     } finally {
       setConnecting(false)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    try {
+      await fetch('/api/gmail/disconnect', { method: 'POST' })
+      setConnected(false)
+      setTodayCount(null)
+      setUnreadCount(null)
+      setEmails([])
+      setSearchResults([])
+      setSummary('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Disconnect failed')
     }
   }
 
@@ -107,6 +149,16 @@ export default function GmailPage() {
     }
   }
 
+  if (checking) {
+    return (
+      <HudPageLayout title="GMAIL INTEGRATION" subtitle="email command module">
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 rounded-full border-2 border-primary-glow/30 border-t-primary-glow animate-spin" />
+        </div>
+      </HudPageLayout>
+    )
+  }
+
   return (
     <HudPageLayout
       title="GMAIL INTEGRATION"
@@ -124,9 +176,11 @@ export default function GmailPage() {
             <p className="text-sm font-mono text-hud-muted/70 text-center">
               Connect your Google account to enable Gmail integration
             </p>
-            <Button onClick={handleConnect} loading={connecting}>
-              Connect Gmail
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleConnect} loading={connecting}>
+                Connect Gmail
+              </Button>
+            </div>
           </div>
         </GlassCard>
       )}
@@ -157,6 +211,12 @@ export default function GmailPage() {
               </Button>
             </GlassCard>
           </div>
+
+          <GlassCard title="Disconnect">
+            <Button onClick={handleDisconnect} variant="danger" size="sm">
+              Disconnect Gmail
+            </Button>
+          </GlassCard>
 
           <GlassCard title="Search Email">
             <div className="flex gap-2">

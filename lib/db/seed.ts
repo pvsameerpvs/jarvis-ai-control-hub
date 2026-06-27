@@ -16,6 +16,7 @@ const defaultSettings: Record<string, string> = {
   vision_capture_interval_ms: '5000',
   browser_automation: 'true',
   gmail_integration: 'false',
+  maps_integration: 'false',
   telegram_integration: 'false',
   theme: 'dark',
   ui_scale: '100',

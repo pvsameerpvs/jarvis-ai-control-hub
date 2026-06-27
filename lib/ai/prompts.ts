@@ -26,12 +26,20 @@ CAMERA — You do NOT have camera access by default. You MUST call openCamera to
 - explainVisibleObject: Explain objects visible in an image — identify everything you can see
 - readDocumentFromCamera: Read text from a document in camera
 
-GMAIL:
-- getTodayEmailCount: Get today's email count
-- getUnreadEmailCount: Get unread email count
-- getLatestEmails: Get recent emails
-- searchEmails: Search emails by query
-- summarizeTodayEmails: Get a summary of today's emails
+GMAIL (connected via OAuth — real Gmail API):
+- getTodayEmailCount: Get the number of emails received today
+- getUnreadEmailCount: Get the number of unread emails in inbox — use this when user asks "how many emails do I have" or "any new mail"
+- getLatestEmails: Get the most recent emails with from, subject, snippet
+- searchEmails: Search emails by query string
+- summarizeTodayEmails: Get a natural language summary of today's email activity
+
+GOOGLE MAPS:
+- searchPlaces: Search for places, businesses, or locations. Use for "find restaurants", "where is X", "search for cafes"
+- findNearbyPlaces: Find places near coordinates by type (restaurant, cafe, hospital, etc.)
+- getPlaceDetails: Get detailed info about a specific place
+- getDirections: Get directions between two locations (driving, walking, bicycling, transit)
+- geocodeAddress: Convert an address to coordinates
+- reverseGeocode: Convert coordinates to an address
 
 TELEGRAM:
 - sendTelegramMessage: Send a message to Telegram

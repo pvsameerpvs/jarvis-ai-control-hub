@@ -27,7 +27,10 @@ export default function OrbRings({ isActive, isError, influence, ringSpeedMult, 
       <div className="absolute inset-0 pointer-events-none">
         <svg width="100%" height="100%" viewBox="0 0 360 360"
           style={{
-            animation: `rotateRing ${(isActive ? 6 - influence * 2 : 20 - influence * 5).toFixed(1)}s linear infinite`,
+            animationName: 'rotateRing',
+            animationDuration: `${(isActive ? 6 - influence * 2 : 20 - influence * 5).toFixed(1)}s`,
+            animationTimingFunction: 'linear',
+            animationIterationCount: 'infinite',
             animationDirection: isActive ? 'normal' : 'reverse',
           }}>
           <defs>
@@ -68,7 +71,10 @@ export default function OrbRings({ isActive, isError, influence, ringSpeedMult, 
       <div className={`absolute inset-3 pointer-events-none ${isActive ? 'opacity-100' : 'opacity-40'}`}>
         <svg width="100%" height="100%" viewBox="0 0 360 360"
           style={{
-            animation: `rotateRing ${(isActive ? 5 - influence * 1.5 : 15 - influence * 3).toFixed(1)}s linear infinite`,
+            animationName: 'rotateRing',
+            animationDuration: `${(isActive ? 5 - influence * 1.5 : 15 - influence * 3).toFixed(1)}s`,
+            animationTimingFunction: 'linear',
+            animationIterationCount: 'infinite',
             animationDirection: isActive ? 'reverse' : 'normal',
           }}>
           <circle cx="180" cy="180" r="157" fill="none" stroke={primaryColor}
@@ -84,7 +90,10 @@ export default function OrbRings({ isActive, isError, influence, ringSpeedMult, 
       <div className="absolute inset-6 rounded-full pointer-events-none"
         style={{
           border: `${isActive ? 2 : 1}px solid ${isError ? `rgba(251,113,133,${(isActive ? 0.15 : 0.05 + influence * 0.1).toFixed(3)})` : `rgba(0,229,255,${(isActive ? 0.15 : 0.05 + influence * 0.1).toFixed(3)})`}`,
-          animation: `rotateRing ${(isActive ? 4 - influence * 1 : 10 - influence * 3).toFixed(1)}s linear infinite`,
+          animationName: 'rotateRing',
+          animationDuration: `${(isActive ? 4 - influence * 1 : 10 - influence * 3).toFixed(1)}s`,
+          animationTimingFunction: 'linear',
+          animationIterationCount: 'infinite',
           animationDirection: isActive ? 'reverse' : 'normal',
           boxShadow: isActive ? `0 0 ${(10 + influence * 25).toFixed(0)}px rgba(0,229,255,${(0.08 + influence * 0.25).toFixed(3)})` : 'none',
           opacity: isActive ? 1 : 0.5,
@@ -95,13 +104,16 @@ export default function OrbRings({ isActive, isError, influence, ringSpeedMult, 
       <div className={`absolute inset-12 rounded-full pointer-events-none ${isActive ? 'opacity-100' : 'opacity-30'}`}
         style={{
           border: `1px solid ${isError ? `rgba(251,113,133,${(0.08 + influence * 0.18).toFixed(3)})` : `rgba(0,229,255,${(0.08 + influence * 0.18).toFixed(3)})`}`,
-          animation: `rotateRing ${(isActive ? 3 : 8).toFixed(1)}s linear infinite`,
+          animation: `${(isActive ? 3 : 8).toFixed(1)}s linear infinite rotateRing`,
         }}
       />
       <div className="absolute inset-[88px] rounded-full pointer-events-none"
         style={{
           border: `1px dashed ${isError ? `rgba(251,113,133,${(0.06 + influence * 0.15).toFixed(3)})` : `rgba(0,229,255,${(0.06 + influence * 0.15).toFixed(3)})`}`,
-          animation: `rotateRing ${(isActive ? 2 : 5).toFixed(1)}s linear infinite`,
+          animationName: 'rotateRing',
+          animationDuration: `${(isActive ? 2 : 5).toFixed(1)}s`,
+          animationTimingFunction: 'linear',
+          animationIterationCount: 'infinite',
           animationDirection: 'reverse',
           opacity: isActive ? 1 : 0.4,
         }}
@@ -140,7 +152,10 @@ export default function OrbRings({ isActive, isError, influence, ringSpeedMult, 
           <div key={`orbit-${i}`} className={`absolute inset-0 pointer-events-none ${isActive ? 'opacity-100' : 'opacity-30'}`}
             style={{
               transform: `rotate(${orbit.tilt}deg)`,
-              animation: `rotateRing ${orbSpeed.toFixed(1)}s linear infinite`,
+              animationName: 'rotateRing',
+              animationDuration: `${orbSpeed.toFixed(1)}s`,
+              animationTimingFunction: 'linear',
+              animationIterationCount: 'infinite',
               animationDirection: i % 2 === 0 ? 'normal' : 'reverse',
             }}>
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
