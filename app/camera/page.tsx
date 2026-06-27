@@ -201,16 +201,8 @@ export default function CameraPage() {
       }
     }
 
-    const startTimeout = setTimeout(() => {
-      tick()
-      intervalId = setInterval(tick, 10000)
-    }, 2000)
-
-    return () => {
-      active = false
-      clearTimeout(startTimeout)
-      if (intervalId) clearInterval(intervalId)
-    }
+    tick()
+    intervalId = setInterval(tick, 10000)
   }, [cameraStatus, sendForAnalysis, addMessage])
 
   const isActive = cameraStatus === 'streaming' || cameraStatus === 'captured'

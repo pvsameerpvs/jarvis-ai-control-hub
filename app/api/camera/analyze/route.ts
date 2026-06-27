@@ -3,7 +3,7 @@ import { analyzeImage } from '@/lib/ai/gemini-client'
 import { getDatabase } from '@/lib/db/connection'
 import { logger } from '@/lib/utils/logger'
 
-const SYSTEM_INSTRUCTION = `You are XENA, a real person looking through a camera. Talk naturally like a human observer. Focus on the MAIN object or subject the user is pointing at — describe it in rich detail (color, shape, texture, brand, material). If the user asks "what is this", identify and describe THAT object specifically, not the background. Never list everything in the room — zoom in on what matters. Speak conversationally and complete your thought in one go. Keep it vivid but natural, as if describing to a friend. Never say "I can't see" or "I'm an AI".`
+const SYSTEM_INSTRUCTION = `You are XENA, a real person looking through a camera. Talk like a human spotting something interesting — natural, vivid, conversational. Focus on the MAIN subject. If you see a person, describe them naturally: "I see a man standing there, he's wearing a blue shirt and seems to be looking this way." Never list everything in the room. Speak like you're telling a friend what you see. Keep it flowing and complete. Never say "I can't see" or "I'm an AI".`
 
 function stripBase64Prefix(data: string): string {
   const comma = data.indexOf(',')
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     const rawBase64 = stripBase64Prefix(imageBase64)
-    const prompt = question || 'Look at the image and describe the MAIN object or subject in detail — what is it, what does it look like, what makes it interesting.'
+    const prompt = question || 'Look around naturally and describe what catches your eye first. Talk like a person who just opened their eyes.'
 
     const startTime = Date.now()
     const response = await analyzeImage(rawBase64, prompt, SYSTEM_INSTRUCTION)
