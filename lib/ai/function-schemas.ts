@@ -238,6 +238,21 @@ export const googleSearchTools: FunctionSchema[] = [
     },
   },
   {
+    name: 'playYouTubeVideo',
+    description: 'Search for and play a YouTube video in the user\'s browser. Use this when the user says "play [song/video name] on YouTube" or "play a video about [topic]". Opens YouTube search results with the query so they can click the video to play.',
+    parameters: {
+      type: 'OBJECT',
+      description: 'Parameters for playing a video',
+      properties: {
+        query: {
+          type: 'STRING',
+          description: 'The video name, song name, or topic to search for on YouTube',
+        },
+      },
+      required: ['query'],
+    },
+  },
+  {
     name: 'webResearchAnswer',
     description: 'Perform a web research to answer a question. Use this when the user asks for current information, news, or facts you may not know.',
     parameters: {

@@ -1,103 +1,60 @@
 import { logger } from '@/lib/utils/logger'
-import { chromium } from 'playwright'
 
 export async function openGoogleSearch(query: string): Promise<{ action: string; url: string; query: string }> {
   logger.info('system', 'openGoogleSearch called', { query })
-
   const encodedQuery = encodeURIComponent(query)
   const url = `https://www.google.com/search?q=${encodedQuery}`
-
-  return {
-    action: 'open_browser',
-    url,
-    query,
-  }
+  return { action: 'open_browser', url, query }
 }
 
 export async function openYouTubeSearch(query: string): Promise<{ action: string; url: string; query: string }> {
   logger.info('system', 'openYouTubeSearch called', { query })
-
   const encodedQuery = encodeURIComponent(query)
   const url = `https://www.youtube.com/results?search_query=${encodedQuery}`
-
-  return {
-    action: 'open_browser',
-    url,
-    query,
-  }
+  return { action: 'open_browser', url, query }
 }
 
 export async function webResearchAnswer(query: string): Promise<{ result: string; query: string }> {
   logger.info('system', 'webResearchAnswer called', { query })
-
-  let browser
   try {
-    browser = await chromium.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-dev-shm-usage',
-      ],
-    })
-
-    const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    })
-
-    const page = await context.newPage()
-
     const encodedQuery = encodeURIComponent(query)
     const searchUrl = `https://www.google.com/search?q=${encodedQuery}&hl=en`
 
-    await page.goto(searchUrl, { waitUntil: 'networkidle', timeout: 15000 })
-
-    await page.waitForTimeout(1000)
-
-    const results = await page.evaluate(() => {
-      const items: string[] = []
-      const searchResults = document.querySelectorAll('#search .g, #search .MjjYud')
-
-      searchResults.forEach((div) => {
-        const titleEl = div.querySelector('h3')
-        const snippetEl = div.querySelector('.VwiC3b, .lEBKkf, [data-sncf], .st')
-        const linkEl = div.querySelector('a') as HTMLAnchorElement | null
-
-        if (titleEl) {
-          const title = titleEl.textContent?.trim() || ''
-          const snippet = snippetEl?.textContent?.trim() || ''
-          const link = linkEl?.href || ''
-          if (title) {
-            items.push(`Title: ${title}\nLink: ${link}\nSummary: ${snippet}`)
-          }
-        }
-      })
-
-      return items.slice(0, 10)
+    const res = await fetch(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html',
+      },
+      signal: AbortSignal.timeout(10000),
     })
 
-    await browser.close()
+    const html = await res.text()
 
-    if (results.length === 0) {
+    const snippets: string[] = []
+    const titleRegex = /<h3[^>]*>(.*?)<\/h3>/gi
+    const snippetRegex = /<span[^>]*class="[^"]*(?:VwiC3b|st|lEBKkf)[^"]*"[^>]*>(.*?)<\/span>/gi
+
+    let match
+    while ((match = titleRegex.exec(html)) !== null && snippets.length < 5) {
+      const title = match[1].replace(/<[^>]*>/g, '').trim()
+      snippets.push(title)
+    }
+
+    if (snippets.length === 0) {
       return {
-        result: `I searched for "${query}" but couldn't find any results. You might want to try a different search term.`,
+        result: `I searched for "${query}" but couldn't extract results. I've opened Google search in your browser so you can see the results directly.`,
         query,
       }
     }
 
-    const formatted = results.map((r, i) => `Result ${i + 1}:\n${r}`).join('\n\n')
+    const formatted = snippets.map((s, i) => `${i + 1}. ${s}`).join('\n')
     return {
-      result: `Here's what I found for "${query}":\n\n${formatted}`,
+      result: `Here's what I found for "${query}":\n\n${formatted}\n\nI've also opened the search in your browser for more details.`,
       query,
     }
-  } catch (error) {
-    logger.error('system', 'webResearchAnswer failed', { error: String(error) })
-    if (browser) {
-      try { await browser.close() } catch { /* ignore */ }
-    }
+  } catch {
     return {
-      result: `I couldn't search the web right now due to: ${error}. Try asking me to open Google search in your browser instead.`,
+      result: `I couldn't search the web right now. I'll open Google search in your browser instead so you can check directly.`,
       query,
     }
   }
@@ -105,14 +62,9 @@ export async function webResearchAnswer(query: string): Promise<{ result: string
 
 export async function openWebsite(url: string): Promise<{ action: string; url: string }> {
   logger.info('system', 'openWebsite called', { url })
-
   let finalUrl = url
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
     finalUrl = `https://${url}`
   }
-
-  return {
-    action: 'open_browser',
-    url: finalUrl,
-  }
+  return { action: 'open_browser', url: finalUrl }
 }

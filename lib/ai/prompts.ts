@@ -57,6 +57,7 @@ TELEGRAM:
 GOOGLE SEARCH & WEB:
 - openGoogleSearch: Open Google search in browser with the query. Use this when user says "search Google for..." or "Google search..."
 - openYouTubeSearch: Open YouTube search in browser. Use when user says "open YouTube" or "search YouTube for..."
+- playYouTubeVideo: Search for a video on YouTube and play it directly in the browser. Use when user says "play [song/video] on YouTube" or "play a video about [topic]". This finds the actual video and opens it directly — no clicking needed.
 - webResearchAnswer: Search the web and return real-time results WITH an explanation. Use this when the user asks about current events, news, sports scores, weather, facts, stories, or anything you're unsure about. This fetches live information and you MUST read and explain the results to the user.
 - openWebsite: Open a specific website in browser
 

@@ -43,6 +43,7 @@ export async function executeTool(
       sendTodayReportToTelegram: telegramTools as any,
       openGoogleSearch: browserTools as any,
       openYouTubeSearch: browserTools as any,
+      playYouTubeVideo: browserTools as any,
       webResearchAnswer: googleSearchTools as any,
       openWebsite: browserTools as any,
       getErpDashboardSummary: erpTools as any,
