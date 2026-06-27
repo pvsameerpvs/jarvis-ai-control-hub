@@ -1,6 +1,10 @@
+import { exec } from 'child_process'
+import { promisify } from 'util'
 import { gmailServer } from '@/mcp/gmail-server'
 import { getConfig } from '@/lib/utils/config'
 import { logger } from '@/lib/utils/logger'
+
+const execAsync = promisify(exec)
 
 function isGmailConfigured(): boolean {
   return getConfig('gmail_integration') === 'true' && gmailServer.isConfigured()
@@ -70,6 +74,32 @@ export async function summarizeTodayEmails() {
   if (!gmailServer.isLoggedIn()) return gmailNotLoggedInResponse()
   try {
     return await gmailServer.summarizeTodayEmails()
+  } catch (error) {
+    return { error: true, message: String(error) }
+  }
+}
+
+export async function openEmailInGmail(query?: string) {
+  logger.info('gmail', 'openEmailInGmail called', { query })
+  if (!isGmailConfigured()) return gmailNotConfiguredResponse()
+  if (!gmailServer.isLoggedIn()) return gmailNotLoggedInResponse()
+
+  try {
+    const baseUrl = 'https://mail.google.com/mail/u/0/'
+    const url = query
+      ? `${baseUrl}#search/${encodeURIComponent(query)}`
+      : `${baseUrl}#inbox`
+
+    const platform = process.platform
+    if (platform === 'darwin') {
+      await execAsync(`open "${url}"`)
+    } else if (platform === 'win32') {
+      await execAsync(`start "" "${url}"`)
+    } else {
+      await execAsync(`xdg-open "${url}"`)
+    }
+
+    return { success: true, url, message: `Opened Gmail in your browser${query ? ` searching for "${query}"` : ''}.` }
   } catch (error) {
     return { error: true, message: String(error) }
   }

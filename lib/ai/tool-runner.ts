@@ -38,6 +38,7 @@ export async function executeTool(
       getLatestEmails: gmailTools as any,
       searchEmails: gmailTools as any,
       summarizeTodayEmails: gmailTools as any,
+      openEmailInGmail: gmailTools as any,
       sendTelegramMessage: telegramTools as any,
       sendTodayReportToTelegram: telegramTools as any,
       openGoogleSearch: browserTools as any,

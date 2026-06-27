@@ -162,6 +162,21 @@ export const gmailTools: FunctionSchema[] = [
       properties: {},
     },
   },
+  {
+    name: 'openEmailInGmail',
+    description: 'Open Gmail in the user\'s default browser. If a query is provided, it searches Gmail for that query. Use this when the user says "open Gmail", "show me emails", or "open that email" — it opens the Gmail web interface directly in their browser.',
+    parameters: {
+      type: 'OBJECT',
+      description: 'Parameters for opening Gmail',
+      properties: {
+        query: {
+          type: 'STRING',
+          description: 'Optional search query to find specific emails (e.g. "from:john", "subject:project", "Amazon receipt")',
+        },
+      },
+      required: [],
+    },
+  },
 ]
 
 export const telegramTools: FunctionSchema[] = [
